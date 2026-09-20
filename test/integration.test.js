@@ -138,8 +138,6 @@ test('recebe uma adoção e aplica suas regras de status', async () => {
     reason: 'Quero reforçar a mesma solicitação, mas o sistema deve identificar a duplicidade.'
   } });
   assert.equal(duplicate.response.status, 409);
-  const protectedDelete = await request(`/api/animals/${animalId}`, { method: 'DELETE', auth: true });
-  assert.equal(protectedDelete.response.status, 409);
   await request(`/api/adoptions/${adoptionId}/status`, { method: 'PATCH', auth: true, body: { status: 'em_analise' } });
   let animal = await request(`/api/animals/${animalId}`);
   assert.equal(animal.payload.status, 'em_processo');
@@ -156,6 +154,12 @@ test('recebe uma adoção e aplica suas regras de status', async () => {
     reason: 'Tenho uma casa segura e disponibilidade para oferecer todos os cuidados necessários.'
   } });
   assert.equal(unavailable.response.status, 409);
+  const archived = await request(`/api/animals/${animalId}`, { method: 'DELETE', auth: true });
+  assert.equal(archived.response.status, 204);
+  const hidden = await request(`/api/animals/${animalId}`);
+  assert.equal(hidden.response.status, 404);
+  const restored = await request(`/api/animals/${animalId}/restore`, { method: 'PATCH', auth: true });
+  assert.equal(restored.payload.archivedAt, null);
 });
 
 test('executa o CRUD de necessidades', async () => {
@@ -169,6 +173,10 @@ test('executa o CRUD de necessidades', async () => {
   assert.equal(updated.payload.currentQuantity, 18);
   const removed = await request(`/api/needs/${needId}`, { method: 'DELETE', auth: true });
   assert.equal(removed.response.status, 204);
+  const adminNeeds = await request('/api/admin/needs', { auth: true });
+  assert.equal(adminNeeds.payload.find(need => need.id === needId).archivedAt !== null, true);
+  const restored = await request(`/api/needs/${needId}/restore`, { method: 'PATCH', auth: true });
+  assert.equal(restored.payload.archivedAt, null);
 });
 
 test('registra, confirma e contabiliza uma doação', async () => {

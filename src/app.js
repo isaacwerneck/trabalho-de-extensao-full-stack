@@ -31,13 +31,14 @@ const mapAnimal = row => row && ({
   photoUrl: row.photo_url, vaccinationStatus: row.vaccination_status,
   neutered: Boolean(row.neutered), dewormed: Boolean(row.dewormed),
   specialNeeds: row.special_needs, healthNotes: row.health_notes,
-  status: row.status, createdAt: row.created_at, updatedAt: row.updated_at
+  archivedAt: row.archived_at, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at
 });
 
 const mapNeed = row => row && ({
   id: row.id, title: row.title, description: row.description, priority: row.priority,
   targetQuantity: row.target_quantity, currentQuantity: row.current_quantity,
   unit: row.unit, active: Boolean(row.active), createdAt: row.created_at, updatedAt: row.updated_at
+  , archivedAt: row.archived_at
 });
 
 const mapAdoption = row => row && ({
@@ -117,7 +118,7 @@ export function createApp(overrides = {}) {
   });
 
   app.get('/api/admin/dashboard', requireAdmin, (req, res) => {
-    const animalRows = db.prepare('SELECT status, COUNT(*) total FROM animals GROUP BY status').all();
+    const animalRows = db.prepare('SELECT status, COUNT(*) total FROM animals WHERE archived_at IS NULL GROUP BY status').all();
     const adoptionRows = db.prepare('SELECT status, COUNT(*) total FROM adoption_applications GROUP BY status').all();
     const animals = Object.fromEntries(animalStatuses.map(status => [status, 0]));
     const adoptions = Object.fromEntries(adoptionStatuses.map(status => [status, 0]));
@@ -128,8 +129,8 @@ export function createApp(overrides = {}) {
       COALESCE(SUM(CASE WHEN type='item' AND status='confirmada' THEN 1 ELSE 0 END),0) confirmed_items,
       COALESCE(SUM(CASE WHEN status='registrada' THEN 1 ELSE 0 END),0) pending FROM donations`).get();
     const needs = db.prepare(`SELECT COUNT(*) total,
-      SUM(CASE WHEN active=1 THEN 1 ELSE 0 END) active,
-      COALESCE(AVG(CASE WHEN active=1 THEN MIN(current_quantity / target_quantity, 1) * 100 END),0) average_progress
+      SUM(CASE WHEN active=1 AND archived_at IS NULL THEN 1 ELSE 0 END) active,
+      COALESCE(AVG(CASE WHEN active=1 AND archived_at IS NULL THEN MIN(current_quantity / target_quantity, 1) * 100 END),0) average_progress
       FROM needs`).get();
     res.json({
       animals: { ...animals, total: Object.values(animals).reduce((sum, value) => sum + value, 0) },
@@ -140,7 +141,7 @@ export function createApp(overrides = {}) {
   });
 
   app.get('/api/animals', (req, res) => {
-    const clauses = [];
+    const clauses = ['archived_at IS NULL'];
     const params = [];
     if (req.query.status) {
       clauses.push('status = ?');
@@ -184,8 +185,14 @@ export function createApp(overrides = {}) {
     res.json(rows.map(mapAnimal));
   });
 
+  app.get('/api/admin/animals', requireAdmin, (req, res) => {
+    const rows = db.prepare(`SELECT * FROM animals
+      ORDER BY archived_at IS NOT NULL, CASE status WHEN 'disponivel' THEN 0 WHEN 'em_processo' THEN 1 ELSE 2 END, id DESC`).all();
+    res.json(rows.map(mapAnimal));
+  });
+
   app.get('/api/animals/:id', (req, res) => {
-    const animal = mapAnimal(db.prepare('SELECT * FROM animals WHERE id = ?').get(readId(req.params.id)));
+    const animal = mapAnimal(db.prepare('SELECT * FROM animals WHERE id = ? AND archived_at IS NULL').get(readId(req.params.id)));
     if (!animal) throw notFound('Animal');
     res.json(animal);
   });
@@ -210,14 +217,16 @@ export function createApp(overrides = {}) {
 
   app.delete('/api/animals/:id', requireAdmin, (req, res) => {
     const id = readId(req.params.id);
-    if (db.prepare('SELECT 1 FROM adoption_applications WHERE animal_id = ? LIMIT 1').get(id)) {
-      const error = new Error('Este animal possui solicitações e deve ser preservado no histórico. Altere seu status.');
-      error.status = 409;
-      throw error;
-    }
-    const result = db.prepare('DELETE FROM animals WHERE id = ?').run(id);
+    const result = db.prepare('UPDATE animals SET archived_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND archived_at IS NULL').run(id);
     if (!result.changes) throw notFound('Animal');
     res.status(204).end();
+  });
+
+  app.patch('/api/animals/:id/restore', requireAdmin, (req, res) => {
+    const id = readId(req.params.id);
+    const result = db.prepare('UPDATE animals SET archived_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND archived_at IS NOT NULL').run(id);
+    if (!result.changes) throw notFound('Animal arquivado');
+    res.json(mapAnimal(db.prepare('SELECT * FROM animals WHERE id=?').get(id)));
   });
 
   app.post('/api/adoptions', (req, res) => {
@@ -300,7 +309,7 @@ export function createApp(overrides = {}) {
   });
 
   app.get('/api/needs', (req, res) => {
-    const rows = db.prepare('SELECT * FROM needs WHERE active=1 ORDER BY CASE priority WHEN \'alta\' THEN 0 WHEN \'media\' THEN 1 ELSE 2 END, id DESC').all();
+    const rows = db.prepare('SELECT * FROM needs WHERE active=1 AND archived_at IS NULL ORDER BY CASE priority WHEN \'alta\' THEN 0 WHEN \'media\' THEN 1 ELSE 2 END, id DESC').all();
     res.json(rows.map(mapNeed));
   });
 
@@ -323,9 +332,16 @@ export function createApp(overrides = {}) {
   });
 
   app.delete('/api/needs/:id', requireAdmin, (req, res) => {
-    const result = db.prepare('DELETE FROM needs WHERE id=?').run(readId(req.params.id));
+    const result = db.prepare('UPDATE needs SET archived_at=CURRENT_TIMESTAMP,active=0,updated_at=CURRENT_TIMESTAMP WHERE id=? AND archived_at IS NULL').run(readId(req.params.id));
     if (!result.changes) throw notFound('Necessidade');
     res.status(204).end();
+  });
+
+  app.patch('/api/needs/:id/restore', requireAdmin, (req, res) => {
+    const id = readId(req.params.id);
+    const result = db.prepare('UPDATE needs SET archived_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND archived_at IS NOT NULL').run(id);
+    if (!result.changes) throw notFound('Necessidade arquivada');
+    res.json(mapNeed(db.prepare('SELECT * FROM needs WHERE id=?').get(id)));
   });
 
   app.post('/api/donations', (req, res) => {

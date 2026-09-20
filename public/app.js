@@ -184,7 +184,7 @@ async function showAdmin() {
 async function loadAdmin() {
   try {
     const [dashboard, animals, adoptions, needs, donations] = await Promise.all([
-      api('/api/admin/dashboard'), api('/api/animals'), api('/api/adoptions'), api('/api/admin/needs'), api('/api/donations')
+      api('/api/admin/dashboard'), api('/api/admin/animals'), api('/api/adoptions'), api('/api/admin/needs'), api('/api/donations')
     ]);
     state.admin = { dashboard, animals, adoptions, needs, donations };
     renderAdminDashboard(); renderAdminAnimals(); renderAdminAdoptions(); renderAdminNeeds(); renderAdminDonations();
@@ -202,7 +202,7 @@ function renderAdminDashboard() {
 }
 
 function renderAdminAnimals() {
-  $('#admin-animals').innerHTML = state.admin.animals.length ? state.admin.animals.map(a => `<article class="data-row"><div><strong>${escapeHtml(a.name)}</strong><small>${escapeHtml(labels[a.species])} • ${a.ageYears} anos</small></div><span class="priority priority-${a.status === 'disponivel' ? 'baixa' : a.status === 'em_processo' ? 'media' : 'alta'}">${escapeHtml(labels[a.status])}</span><small>${escapeHtml(a.description.slice(0, 90))}${a.description.length > 90 ? '…' : ''}</small><div class="row-actions"><button class="button button-ghost button-small" data-edit-animal="${a.id}">Editar</button><button class="button button-danger button-small" data-delete-animal="${a.id}">Excluir</button></div></article>`).join('') : '<div class="empty-state">Nenhum animal cadastrado.</div>';
+  $('#admin-animals').innerHTML = state.admin.animals.length ? state.admin.animals.map(a => `<article class="data-row ${a.archivedAt ? 'is-archived' : ''}"><div><strong>${escapeHtml(a.name)}</strong><small>${escapeHtml(labels[a.species])} • ${a.ageYears} anos${a.archivedAt ? ' • Arquivado' : ''}</small></div><span class="priority priority-${a.status === 'disponivel' ? 'baixa' : a.status === 'em_processo' ? 'media' : 'alta'}">${escapeHtml(labels[a.status])}</span><small>${escapeHtml(a.description.slice(0, 90))}${a.description.length > 90 ? '…' : ''}</small><div class="row-actions">${a.archivedAt ? `<button class="button button-ghost button-small" data-restore-animal="${a.id}">Restaurar</button>` : `<button class="button button-ghost button-small" data-edit-animal="${a.id}">Editar</button><button class="button button-danger button-small" data-archive-animal="${a.id}">Arquivar</button>`}</div></article>`).join('') : '<div class="empty-state">Nenhum animal cadastrado.</div>';
 }
 
 function renderAdminAdoptions() {
@@ -210,7 +210,7 @@ function renderAdminAdoptions() {
 }
 
 function renderAdminNeeds() {
-  $('#admin-needs').innerHTML = state.admin.needs.length ? state.admin.needs.map(n => `<article class="data-row"><div><strong>${escapeHtml(n.title)}</strong><small>${escapeHtml(n.description)}</small></div><span class="priority priority-${n.priority}">${escapeHtml(n.priority)}</span><small>${n.currentQuantity} de ${n.targetQuantity} ${escapeHtml(n.unit)} • ${n.active ? 'Ativa' : 'Inativa'}</small><div class="row-actions"><button class="button button-ghost button-small" data-edit-need="${n.id}">Editar</button><button class="button button-danger button-small" data-delete-need="${n.id}">Excluir</button></div></article>`).join('') : '<div class="empty-state">Nenhuma necessidade cadastrada.</div>';
+  $('#admin-needs').innerHTML = state.admin.needs.length ? state.admin.needs.map(n => `<article class="data-row ${n.archivedAt ? 'is-archived' : ''}"><div><strong>${escapeHtml(n.title)}</strong><small>${escapeHtml(n.description)}</small></div><span class="priority priority-${n.priority}">${escapeHtml(n.priority)}</span><small>${n.currentQuantity} de ${n.targetQuantity} ${escapeHtml(n.unit)} • ${n.archivedAt ? 'Arquivada' : n.active ? 'Ativa' : 'Inativa'}</small><div class="row-actions">${n.archivedAt ? `<button class="button button-ghost button-small" data-restore-need="${n.id}">Restaurar</button>` : `<button class="button button-ghost button-small" data-edit-need="${n.id}">Editar</button><button class="button button-danger button-small" data-archive-need="${n.id}">Arquivar</button>`}</div></article>`).join('') : '<div class="empty-state">Nenhuma necessidade cadastrada.</div>';
 }
 
 function renderAdminDonations() {
@@ -270,18 +270,26 @@ document.addEventListener('click', async event => {
     const animal = state.admin.animals.find(item => item.id === Number(editAnimal.dataset.editAnimal));
     $('#animal-form').reset(); fillForm($('#animal-form'), animal); $('#animal-dialog-title').textContent = `Editar ${animal.name}`; feedback($('#animal-form')); openDialog('animal-dialog');
   }
-  const deleteAnimal = event.target.closest('[data-delete-animal]');
-  if (deleteAnimal && confirm('Excluir este animal? Esta ação não pode ser desfeita.')) {
-    try { await api(`/api/animals/${deleteAnimal.dataset.deleteAnimal}`, { method: 'DELETE' }); toast('Animal excluído.'); await Promise.all([loadAdmin(), loadPublic()]); } catch (error) { toast(error.message); }
+  const archiveAnimal = event.target.closest('[data-archive-animal]');
+  if (archiveAnimal && confirm('Arquivar este animal? Ele deixará de aparecer na área pública.')) {
+    try { await api(`/api/animals/${archiveAnimal.dataset.archiveAnimal}`, { method: 'DELETE' }); toast('Animal arquivado.'); await Promise.all([loadAdmin(), loadPublic()]); } catch (error) { toast(error.message); }
+  }
+  const restoreAnimal = event.target.closest('[data-restore-animal]');
+  if (restoreAnimal) {
+    try { await api(`/api/animals/${restoreAnimal.dataset.restoreAnimal}/restore`, { method: 'PATCH' }); toast('Animal restaurado.'); await Promise.all([loadAdmin(), loadPublic()]); } catch (error) { toast(error.message); }
   }
   const editNeed = event.target.closest('[data-edit-need]');
   if (editNeed) {
     const need = state.admin.needs.find(item => item.id === Number(editNeed.dataset.editNeed));
     $('#need-form').reset(); fillForm($('#need-form'), need); $('#need-dialog-title').textContent = `Editar ${need.title}`; feedback($('#need-form')); openDialog('need-dialog');
   }
-  const deleteNeed = event.target.closest('[data-delete-need]');
-  if (deleteNeed && confirm('Excluir esta necessidade?')) {
-    try { await api(`/api/needs/${deleteNeed.dataset.deleteNeed}`, { method: 'DELETE' }); toast('Necessidade excluída.'); await Promise.all([loadAdmin(), loadPublic()]); } catch (error) { toast(error.message); }
+  const archiveNeed = event.target.closest('[data-archive-need]');
+  if (archiveNeed && confirm('Arquivar esta necessidade?')) {
+    try { await api(`/api/needs/${archiveNeed.dataset.archiveNeed}`, { method: 'DELETE' }); toast('Necessidade arquivada.'); await Promise.all([loadAdmin(), loadPublic()]); } catch (error) { toast(error.message); }
+  }
+  const restoreNeed = event.target.closest('[data-restore-need]');
+  if (restoreNeed) {
+    try { await api(`/api/needs/${restoreNeed.dataset.restoreNeed}/restore`, { method: 'PATCH' }); toast('Necessidade restaurada.'); await Promise.all([loadAdmin(), loadPublic()]); } catch (error) { toast(error.message); }
   }
 });
 

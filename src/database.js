@@ -39,6 +39,7 @@ const schema = `
     dewormed INTEGER NOT NULL DEFAULT 0 CHECK(dewormed IN (0,1)),
     special_needs TEXT,
     health_notes TEXT,
+    archived_at TEXT,
     status TEXT NOT NULL DEFAULT 'disponivel' CHECK(status IN ('disponivel','em_processo','adotado')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -72,6 +73,7 @@ const schema = `
     current_quantity REAL NOT NULL DEFAULT 0 CHECK(current_quantity >= 0),
     unit TEXT NOT NULL,
     active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
+    archived_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) STRICT;
@@ -111,10 +113,13 @@ function migrate(db) {
     ['dewormed', 'INTEGER NOT NULL DEFAULT 0 CHECK(dewormed IN (0,1))'],
     ['special_needs', 'TEXT'],
     ['health_notes', 'TEXT']
+    , ['archived_at', 'TEXT']
   ];
   for (const [name, definition] of migrations) {
     if (!columns.has(name)) db.exec(`ALTER TABLE animals ADD COLUMN ${name} ${definition}`);
   }
+  const needColumns = new Set(db.prepare('PRAGMA table_info(needs)').all().map(column => column.name));
+  if (!needColumns.has('archived_at')) db.exec('ALTER TABLE needs ADD COLUMN archived_at TEXT');
 }
 
 function seed(db, config) {
