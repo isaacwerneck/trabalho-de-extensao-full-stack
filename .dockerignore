@@ -1,0 +1,11 @@
+node_modules
+.git
+.env
+data
+public/uploads
+test
+test-results
+playwright-report
+docs
+*.md
+!README.md

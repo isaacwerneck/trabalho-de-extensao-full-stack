@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_PATH: /app/storage/patas-na-rua.sqlite
+      UPLOAD_DIR: /app/storage/uploads
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@patasnarua.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Defina ADMIN_PASSWORD no arquivo .env}
+    volumes:
+      - patas-storage:/app/storage
+    restart: unless-stopped
+
+volumes:
+  patas-storage:

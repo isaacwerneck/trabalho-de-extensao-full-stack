@@ -52,6 +52,16 @@ pnpm db:reset -- --confirm
 
 O comando é bloqueado em produção e atua somente sobre o arquivo SQLite configurado em `DATABASE_PATH`.
 
+## Execução em produção com Docker
+
+Crie o `.env` com uma senha administrativa forte e execute:
+
+```bash
+docker compose up --build -d
+```
+
+O volume `patas-storage` mantém o banco SQLite e as imagens enviadas mesmo após a recriação do container. O container inclui healthcheck e o servidor encerra conexões e banco de forma segura ao receber um sinal de parada.
+
 ## Estrutura
 
 ```text
