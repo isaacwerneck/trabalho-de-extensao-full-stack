@@ -110,7 +110,7 @@ function renderNeeds() {
   grid.innerHTML = state.needs.map(need => {
     const percent = Math.min(100, Math.round((need.currentQuantity / need.targetQuantity) * 100));
     return `<article class="need-card"><div class="need-top"><h3>${escapeHtml(need.title)}</h3><span class="priority priority-${need.priority}">${escapeHtml(need.priority)}</span></div>
-      <p>${escapeHtml(need.description)}</p><div class="progress-track" aria-label="${percent}% da meta"><i style="width:${percent}%"></i></div>
+      <p>${escapeHtml(need.description)}</p><div class="progress-track" role="progressbar" aria-label="Progresso de ${escapeHtml(need.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><i style="width:${percent}%"></i></div>
       <div class="need-progress"><span>${need.currentQuantity} ${escapeHtml(need.unit)}</span><span>Meta: ${need.targetQuantity} ${escapeHtml(need.unit)}</span></div></article>`;
   }).join('');
 }
