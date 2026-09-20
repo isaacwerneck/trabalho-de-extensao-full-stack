@@ -205,6 +205,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest-2); outli
 .status-history { display: flex; flex-wrap: wrap; gap: .35rem; margin: .5rem 0 0; padding: 0; list-style: none; }
 .status-history li { display: inline-flex; gap: .35rem; padding: .25rem .45rem; border-radius: 7px; color: var(--muted); background: var(--cream); font: 500 .62rem var(--font-accent); }
 .status-history time { opacity: .8; }
+.audit-list { display: grid; gap: .5rem; }
+.audit-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: white; }
+.audit-row div { display: flex; flex-wrap: wrap; gap: .5rem; }
+.audit-row span, .audit-row time { color: var(--muted); font-size: .82rem; }
 .inline-select { width: auto; min-width: 145px; padding: .55rem .65rem; }
 
 @media (max-width: 980px) {

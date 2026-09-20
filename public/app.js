@@ -7,7 +7,7 @@ const state = {
   pagination: null,
   animals: [],
   needs: [],
-  admin: { dashboard: null, animals: [], adoptions: [], needs: [], donations: [] }
+  admin: { dashboard: null, animals: [], adoptions: [], needs: [], donations: [], auditLogs: [] }
 };
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
@@ -183,14 +183,19 @@ async function showAdmin() {
 
 async function loadAdmin() {
   try {
-    const [dashboard, animals, adoptions, needs, donations] = await Promise.all([
-      api('/api/admin/dashboard'), api('/api/admin/animals'), api('/api/adoptions'), api('/api/admin/needs'), api('/api/donations')
+    const [dashboard, animals, adoptions, needs, donations, auditLogs] = await Promise.all([
+      api('/api/admin/dashboard'), api('/api/admin/animals'), api('/api/adoptions'), api('/api/admin/needs'), api('/api/donations'), api('/api/audit-logs')
     ]);
-    state.admin = { dashboard, animals, adoptions, needs, donations };
-    renderAdminDashboard(); renderAdminAnimals(); renderAdminAdoptions(); renderAdminNeeds(); renderAdminDonations();
+    state.admin = { dashboard, animals, adoptions, needs, donations, auditLogs };
+    renderAdminDashboard(); renderAdminAnimals(); renderAdminAdoptions(); renderAdminNeeds(); renderAdminDonations(); renderAuditLogs();
   } catch (error) {
     toast(error.message);
   }
+}
+
+function renderAuditLogs() {
+  const actionLabels = { criou: 'Criou', atualizou: 'Atualizou', arquivou: 'Arquivou', restaurou: 'Restaurou', alterou_status: 'Alterou status de', upload: 'Enviou', alterou_senha: 'Alterou senha de' };
+  $('#admin-audit').innerHTML = state.admin.auditLogs.length ? state.admin.auditLogs.map(log => `<article class="audit-row"><div><strong>${escapeHtml(log.userName)}</strong><span>${escapeHtml(actionLabels[log.action] ?? log.action)} ${escapeHtml(log.entityType)}${log.entityId ? ` #${log.entityId}` : ''}</span></div><time>${formatDate(log.createdAt)}</time></article>`).join('') : '<div class="empty-state">Nenhuma ação administrativa registrada.</div>';
 }
 
 function renderAdminDashboard() {

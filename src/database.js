@@ -89,10 +89,20 @@ const schema = `
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK((type = 'financeira' AND amount > 0) OR (type = 'item' AND item_description IS NOT NULL))
   ) STRICT;
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id INTEGER,
+    details TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ) STRICT;
   CREATE INDEX IF NOT EXISTS idx_animals_status ON animals(status);
   CREATE INDEX IF NOT EXISTS idx_adoptions_status ON adoption_applications(status);
   CREATE INDEX IF NOT EXISTS idx_adoption_history ON adoption_status_history(adoption_id, id);
   CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
+  CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(id DESC);
 `;
 
 export function createDatabase(config) {

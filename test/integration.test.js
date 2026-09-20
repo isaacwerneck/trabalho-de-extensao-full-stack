@@ -199,6 +199,10 @@ test('registra, confirma e contabiliza uma doação', async () => {
   assert.equal(dashboard.payload.adoptions.aprovada, 1);
   assert.equal(dashboard.payload.donations.confirmedAmount, 125.5);
   assert.equal(typeof dashboard.payload.needs.averageProgress, 'number');
+  const auditLogs = await request('/api/audit-logs', { auth: true });
+  assert.equal(auditLogs.response.status, 200);
+  assert.ok(auditLogs.payload.some(log => log.action === 'alterou_status' && log.entityType === 'doacao'));
+  assert.ok(auditLogs.payload.some(log => log.action === 'criou' && log.entityType === 'animal'));
 });
 
 test('encerra a sessão e invalida o token', async () => {

@@ -58,6 +58,12 @@ const mapDonation = row => row && ({
   createdAt: row.created_at, updatedAt: row.updated_at
 });
 
+const mapAuditLog = row => ({
+  id: row.id, userName: row.user_name ?? 'Sistema', action: row.action,
+  entityType: row.entity_type, entityId: row.entity_id,
+  details: row.details ? JSON.parse(row.details) : null, createdAt: row.created_at
+});
+
 function notFound(entity = 'Registro') {
   const error = new Error(`${entity} não encontrado.`);
   error.status = 404;
@@ -101,12 +107,18 @@ export function createApp(overrides = {}) {
     next();
   }
 
+  function audit(userId, action, entityType, entityId = null, details = null) {
+    db.prepare('INSERT INTO audit_logs (user_id,action,entity_type,entity_id,details) VALUES (?,?,?,?,?)')
+      .run(userId, action, entityType, entityId, details ? JSON.stringify(details) : null);
+  }
+
   app.post('/api/uploads/images', requireAdmin, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '2mb' }), (req, res) => {
     if (!Buffer.isBuffer(req.body) || !req.body.length) throw new ValidationError('Selecione uma imagem válida.');
     const extension = imageExtension(req.body);
     if (!extension) throw new ValidationError('O conteúdo do arquivo não corresponde a JPEG, PNG ou WebP.');
     const fileName = `${randomUUID()}.${extension}`;
     fs.writeFileSync(path.join(config.uploadDir, fileName), req.body, { flag: 'wx' });
+    audit(req.user.id, 'upload', 'imagem', null, { fileName, extension });
     res.status(201).json({ url: `/uploads/${fileName}` });
   });
 
@@ -206,6 +218,7 @@ export function createApp(overrides = {}) {
       (name,species,sex,age_years,size,description,photo_url,vaccination_status,neutered,dewormed,special_needs,health_notes,status)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(a.name, a.species, a.sex, a.ageYears, a.size, a.description, a.photoUrl,
         a.vaccinationStatus, a.neutered, a.dewormed, a.specialNeeds, a.healthNotes, a.status);
+    audit(req.user.id, 'criou', 'animal', Number(result.lastInsertRowid), { name: a.name });
     res.status(201).json(mapAnimal(db.prepare('SELECT * FROM animals WHERE id = ?').get(result.lastInsertRowid)));
   });
 
@@ -215,6 +228,7 @@ export function createApp(overrides = {}) {
     const result = db.prepare(`UPDATE animals SET name=?,species=?,sex=?,age_years=?,size=?,description=?,photo_url=?,vaccination_status=?,neutered=?,dewormed=?,special_needs=?,health_notes=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
       .run(a.name, a.species, a.sex, a.ageYears, a.size, a.description, a.photoUrl, a.vaccinationStatus, a.neutered, a.dewormed, a.specialNeeds, a.healthNotes, a.status, id);
     if (!result.changes) throw notFound('Animal');
+    audit(req.user.id, 'atualizou', 'animal', id, { name: a.name, status: a.status });
     res.json(mapAnimal(db.prepare('SELECT * FROM animals WHERE id = ?').get(id)));
   });
 
@@ -222,6 +236,7 @@ export function createApp(overrides = {}) {
     const id = readId(req.params.id);
     const result = db.prepare('UPDATE animals SET archived_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND archived_at IS NULL').run(id);
     if (!result.changes) throw notFound('Animal');
+    audit(req.user.id, 'arquivou', 'animal', id);
     res.status(204).end();
   });
 
@@ -229,6 +244,7 @@ export function createApp(overrides = {}) {
     const id = readId(req.params.id);
     const result = db.prepare('UPDATE animals SET archived_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND archived_at IS NOT NULL').run(id);
     if (!result.changes) throw notFound('Animal arquivado');
+    audit(req.user.id, 'restaurou', 'animal', id);
     res.json(mapAnimal(db.prepare('SELECT * FROM animals WHERE id=?').get(id)));
   });
 
@@ -292,6 +308,7 @@ export function createApp(overrides = {}) {
     try {
       db.prepare('UPDATE adoption_applications SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(status, id);
       db.prepare('INSERT INTO adoption_status_history (adoption_id,previous_status,new_status) VALUES (?,?,?)').run(id, adoption.status, status);
+      audit(req.user.id, 'alterou_status', 'adocao', id, { from: adoption.status, to: status });
       if (status === 'aprovada') {
         db.prepare("UPDATE animals SET status='adotado',updated_at=CURRENT_TIMESTAMP WHERE id=?").run(adoption.animal_id);
         db.prepare("UPDATE adoption_applications SET status='recusada',updated_at=CURRENT_TIMESTAMP WHERE animal_id=? AND id<>? AND status IN ('recebida','em_analise')")
@@ -322,6 +339,7 @@ export function createApp(overrides = {}) {
     const n = needPayload(req.body);
     const result = db.prepare(`INSERT INTO needs (title,description,priority,target_quantity,current_quantity,unit,active) VALUES (?,?,?,?,?,?,?)`)
       .run(n.title, n.description, n.priority, n.targetQuantity, n.currentQuantity, n.unit, n.active);
+    audit(req.user.id, 'criou', 'necessidade', Number(result.lastInsertRowid), { title: n.title });
     res.status(201).json(mapNeed(db.prepare('SELECT * FROM needs WHERE id=?').get(result.lastInsertRowid)));
   });
 
@@ -331,12 +349,14 @@ export function createApp(overrides = {}) {
     const result = db.prepare(`UPDATE needs SET title=?,description=?,priority=?,target_quantity=?,current_quantity=?,unit=?,active=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
       .run(n.title, n.description, n.priority, n.targetQuantity, n.currentQuantity, n.unit, n.active, id);
     if (!result.changes) throw notFound('Necessidade');
+    audit(req.user.id, 'atualizou', 'necessidade', id, { title: n.title, active: Boolean(n.active) });
     res.json(mapNeed(db.prepare('SELECT * FROM needs WHERE id=?').get(id)));
   });
 
   app.delete('/api/needs/:id', requireAdmin, (req, res) => {
     const result = db.prepare('UPDATE needs SET archived_at=CURRENT_TIMESTAMP,active=0,updated_at=CURRENT_TIMESTAMP WHERE id=? AND archived_at IS NULL').run(readId(req.params.id));
     if (!result.changes) throw notFound('Necessidade');
+    audit(req.user.id, 'arquivou', 'necessidade', readId(req.params.id));
     res.status(204).end();
   });
 
@@ -344,6 +364,7 @@ export function createApp(overrides = {}) {
     const id = readId(req.params.id);
     const result = db.prepare('UPDATE needs SET archived_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=? AND archived_at IS NOT NULL').run(id);
     if (!result.changes) throw notFound('Necessidade arquivada');
+    audit(req.user.id, 'restaurou', 'necessidade', id);
     res.json(mapNeed(db.prepare('SELECT * FROM needs WHERE id=?').get(id)));
   });
 
@@ -361,6 +382,7 @@ export function createApp(overrides = {}) {
     const status = enumeration(req.body.status, 'Status', donationStatuses);
     const result = db.prepare('UPDATE donations SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(status, id);
     if (!result.changes) throw notFound('Doação');
+    audit(req.user.id, 'alterou_status', 'doacao', id, { to: status });
     res.json(mapDonation(db.prepare('SELECT * FROM donations WHERE id=?').get(id)));
   });
 
@@ -386,6 +408,11 @@ export function createApp(overrides = {}) {
   });
 
   app.get('/api/auth/me', requireAdmin, (req, res) => res.json({ user: req.user }));
+  app.get('/api/audit-logs', requireAdmin, (req, res) => {
+    const rows = db.prepare(`SELECT audit_logs.*, users.name user_name FROM audit_logs
+      LEFT JOIN users ON users.id=audit_logs.user_id ORDER BY audit_logs.id DESC LIMIT 100`).all();
+    res.json(rows.map(mapAuditLog));
+  });
   app.patch('/api/auth/password', requireAdmin, (req, res) => {
     const passwords = passwordPayload(req.body);
     const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
@@ -398,6 +425,7 @@ export function createApp(overrides = {}) {
     db.exec('BEGIN');
     try {
       db.prepare('UPDATE users SET password_hash=?,password_salt=? WHERE id=?').run(password.hash, password.salt, user.id);
+      audit(user.id, 'alterou_senha', 'usuario', user.id);
       db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);
       db.exec('COMMIT');
     } catch (error) {
