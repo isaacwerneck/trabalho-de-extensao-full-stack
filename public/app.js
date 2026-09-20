@@ -355,6 +355,12 @@ $('#login-form').addEventListener('submit', async event => {
   catch (error) { feedback(form, error.message); } finally { setBusy(form, false); }
 });
 
+$('#password-form').addEventListener('submit', async event => {
+  event.preventDefault(); const form = event.currentTarget; feedback(form); setBusy(form, true);
+  try { await api('/api/auth/password', { method: 'PATCH', body: JSON.stringify(formData(form)) }); form.closest('dialog').close(); form.reset(); clearSession(); toast('Senha alterada. Entre novamente com a nova senha.'); openDialog('login-dialog'); }
+  catch (error) { feedback(form, error.message); } finally { setBusy(form, false); }
+});
+
 $('#animal-form').addEventListener('submit', async event => {
   event.preventDefault(); const form = event.currentTarget; feedback(form); setBusy(form, true); const data = formData(form); const id = data.id; const photoFile = form.elements.photoFile.files[0]; delete data.id; delete data.photoFile; data.neutered = form.elements.neutered.checked; data.dewormed = form.elements.dewormed.checked;
   try { if (photoFile) data.photoUrl = await uploadImage(photoFile); await api(id ? `/api/animals/${id}` : '/api/animals', { method: id ? 'PUT' : 'POST', body: JSON.stringify(data) }); form.closest('dialog').close(); toast(id ? 'Animal atualizado.' : 'Animal cadastrado.'); await Promise.all([loadAdmin(), loadPublic()]); }

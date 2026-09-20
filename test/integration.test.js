@@ -207,3 +207,19 @@ test('encerra a sessão e invalida o token', async () => {
   const me = await request('/api/auth/me', { auth: true });
   assert.equal(me.response.status, 401);
 });
+
+test('altera a senha e invalida todas as sessões anteriores', async () => {
+  const login = await request('/api/auth/login', { method: 'POST', body: { email: 'teste@patas.local', password: 'SenhaSegura123!' } });
+  token = login.payload.token;
+  const weak = await request('/api/auth/password', { method: 'PATCH', auth: true, body: { currentPassword: 'SenhaSegura123!', newPassword: 'senhafraca123' } });
+  assert.equal(weak.response.status, 400);
+  const changed = await request('/api/auth/password', { method: 'PATCH', auth: true, body: { currentPassword: 'SenhaSegura123!', newPassword: 'NovaSenhaSegura456!' } });
+  assert.equal(changed.response.status, 204);
+  const expired = await request('/api/auth/me', { auth: true });
+  assert.equal(expired.response.status, 401);
+  const oldLogin = await request('/api/auth/login', { method: 'POST', body: { email: 'teste@patas.local', password: 'SenhaSegura123!' } });
+  assert.equal(oldLogin.response.status, 401);
+  const newLogin = await request('/api/auth/login', { method: 'POST', body: { email: 'teste@patas.local', password: 'NovaSenhaSegura456!' } });
+  assert.equal(newLogin.response.status, 200);
+  token = newLogin.payload.token;
+});

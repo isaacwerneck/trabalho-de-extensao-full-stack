@@ -30,6 +30,7 @@ Na primeira execução, o sistema cria o banco, as tabelas e dados demonstrativo
 - Senha: `TroqueEstaSenha123!`
 
 Defina `ADMIN_EMAIL` e `ADMIN_PASSWORD` no ambiente antes da primeira execução para trocar essas credenciais. Nunca utilize a senha demonstrativa em produção.
+O servidor recusa a inicialização em `NODE_ENV=production` enquanto a senha demonstrativa estiver configurada. A senha também pode ser alterada no painel, encerrando todas as sessões anteriores.
 
 ## Testes
 

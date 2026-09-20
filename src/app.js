@@ -4,11 +4,11 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createDatabase } from './database.js';
-import { createSessionToken, hashToken, verifyPassword } from './auth.js';
+import { createSessionToken, hashPassword, hashToken, verifyPassword } from './auth.js';
 import { getConfig } from './config.js';
 import {
   ValidationError, adoptionPayload, animalPayload, donationPayload, email,
-  enumeration, integer, needPayload, number, text
+  enumeration, integer, needPayload, number, passwordPayload, text
 } from './validation.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -79,8 +79,11 @@ export function createApp(overrides = {}) {
     res.set({
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Resource-Policy': 'same-origin',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     });
     next();
   });
@@ -383,6 +386,26 @@ export function createApp(overrides = {}) {
   });
 
   app.get('/api/auth/me', requireAdmin, (req, res) => res.json({ user: req.user }));
+  app.patch('/api/auth/password', requireAdmin, (req, res) => {
+    const passwords = passwordPayload(req.body);
+    const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
+    if (!verifyPassword(passwords.currentPassword, user.password_salt, user.password_hash)) {
+      const error = new Error('Senha atual incorreta.');
+      error.status = 401;
+      throw error;
+    }
+    const password = hashPassword(passwords.newPassword);
+    db.exec('BEGIN');
+    try {
+      db.prepare('UPDATE users SET password_hash=?,password_salt=? WHERE id=?').run(password.hash, password.salt, user.id);
+      db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+    res.status(204).end();
+  });
   app.post('/api/auth/logout', requireAdmin, (req, res) => {
     db.prepare('DELETE FROM sessions WHERE token_hash=?').run(req.tokenHash);
     res.status(204).end();

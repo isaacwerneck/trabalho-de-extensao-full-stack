@@ -8,7 +8,8 @@ try {
 }
 
 export function getConfig(overrides = {}) {
-  return {
+  const config = {
+    nodeEnv: overrides.nodeEnv ?? process.env.NODE_ENV ?? 'development',
     port: Number(overrides.port ?? process.env.PORT ?? 3000),
     databasePath: path.resolve(overrides.databasePath ?? process.env.DATABASE_PATH ?? './data/patas-na-rua.sqlite'),
     uploadDir: path.resolve(overrides.uploadDir ?? process.env.UPLOAD_DIR ?? './public/uploads'),
@@ -17,4 +18,8 @@ export function getConfig(overrides = {}) {
     adminEmail: (overrides.adminEmail ?? process.env.ADMIN_EMAIL ?? 'admin@patasnarua.local').toLowerCase(),
     adminPassword: overrides.adminPassword ?? process.env.ADMIN_PASSWORD ?? 'TroqueEstaSenha123!'
   };
+  if (config.nodeEnv === 'production' && config.adminPassword === 'TroqueEstaSenha123!') {
+    throw new Error('Defina ADMIN_PASSWORD com uma senha segura antes de iniciar em produção.');
+  }
+  return config;
 }

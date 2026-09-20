@@ -118,3 +118,13 @@ export function donationPayload(body) {
     itemDescription
   };
 }
+
+export function passwordPayload(body) {
+  const currentPassword = text(body.currentPassword, 'Senha atual', { min: 8, max: 200 });
+  const newPassword = text(body.newPassword, 'Nova senha', { min: 12, max: 200 });
+  if (!/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+    throw new ValidationError('A nova senha deve conter letra maiúscula, letra minúscula e número.');
+  }
+  if (currentPassword === newPassword) throw new ValidationError('A nova senha deve ser diferente da atual.');
+  return { currentPassword, newPassword };
+}
