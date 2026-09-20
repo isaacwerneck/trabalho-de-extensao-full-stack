@@ -32,6 +32,7 @@ before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'patas-test-'));
   const created = createApp({
     databasePath: path.join(tempDir, 'test.sqlite'),
+    uploadDir: path.join(tempDir, 'uploads'),
     adminEmail: 'teste@patas.local',
     adminPassword: 'SenhaSegura123!'
   });
@@ -99,6 +100,21 @@ test('valida e executa o CRUD de animais', async () => {
   assert.equal(updated.payload.vaccinationStatus, 'em_dia');
   assert.equal(updated.payload.neutered, true);
   assert.equal(updated.payload.specialNeeds, 'Precisa de passeios leves.');
+});
+
+test('envia imagem validada para o cadastro de animais', async () => {
+  const image = Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43]);
+  const response = await fetch(`${baseUrl}/api/uploads/images`, {
+    method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'image/jpeg' }, body: image
+  });
+  const payload = await response.json();
+  assert.equal(response.status, 201);
+  assert.match(payload.url, /^\/uploads\/[\w-]+\.jpg$/);
+  assert.equal(fs.existsSync(path.join(tempDir, payload.url.replace('/uploads/', 'uploads/'))), true);
+  const invalid = await fetch(`${baseUrl}/api/uploads/images`, {
+    method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'image/jpeg' }, body: Buffer.from('arquivo falso')
+  });
+  assert.equal(invalid.status, 400);
 });
 
 test('recebe uma adoção e aplica suas regras de status', async () => {

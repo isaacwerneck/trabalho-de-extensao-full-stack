@@ -4,6 +4,7 @@ data/*.sqlite-*
 .env
 .DS_Store
 coverage/
+public/uploads/*
 
 # Materiais internos e levantamentos não publicados
 *.md

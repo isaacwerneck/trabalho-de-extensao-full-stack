@@ -42,6 +42,17 @@ async function api(path, options = {}) {
   return payload;
 }
 
+async function uploadImage(file) {
+  const response = await fetch('/api/uploads/images', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': file.type },
+    body: file
+  });
+  const payload = await response.json().catch(() => ({ error: 'Resposta inválida do servidor.' }));
+  if (!response.ok) throw new Error(payload.error ?? 'Não foi possível enviar a imagem.');
+  return payload.url;
+}
+
 function toast(message) {
   const element = $('#toast');
   element.textContent = message;
@@ -294,8 +305,8 @@ $('#login-form').addEventListener('submit', async event => {
 });
 
 $('#animal-form').addEventListener('submit', async event => {
-  event.preventDefault(); const form = event.currentTarget; feedback(form); setBusy(form, true); const data = formData(form); const id = data.id; delete data.id; data.neutered = form.elements.neutered.checked; data.dewormed = form.elements.dewormed.checked;
-  try { await api(id ? `/api/animals/${id}` : '/api/animals', { method: id ? 'PUT' : 'POST', body: JSON.stringify(data) }); form.closest('dialog').close(); toast(id ? 'Animal atualizado.' : 'Animal cadastrado.'); await Promise.all([loadAdmin(), loadPublic()]); }
+  event.preventDefault(); const form = event.currentTarget; feedback(form); setBusy(form, true); const data = formData(form); const id = data.id; const photoFile = form.elements.photoFile.files[0]; delete data.id; delete data.photoFile; data.neutered = form.elements.neutered.checked; data.dewormed = form.elements.dewormed.checked;
+  try { if (photoFile) data.photoUrl = await uploadImage(photoFile); await api(id ? `/api/animals/${id}` : '/api/animals', { method: id ? 'PUT' : 'POST', body: JSON.stringify(data) }); form.closest('dialog').close(); toast(id ? 'Animal atualizado.' : 'Animal cadastrado.'); await Promise.all([loadAdmin(), loadPublic()]); }
   catch (error) { feedback(form, error.message); } finally { setBusy(form, false); }
 });
 

@@ -56,5 +56,6 @@ data/            banco SQLite local, criado automaticamente
 2. Visitante envia um pedido de adoção ou registra uma doação.
 3. Administrador entra no painel.
 4. Administrador gerencia animais, necessidades e o andamento das solicitações.
+5. Administrador mantém a ficha de saúde e envia fotos validadas dos animais.
 
 Consulte a documentação em `docs/` para conhecer o escopo, regras de negócio e contratos da API.

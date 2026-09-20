@@ -1,5 +1,7 @@
 import express from 'express';
+import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createDatabase } from './database.js';
 import { createSessionToken, hashToken, verifyPassword } from './auth.js';
@@ -15,6 +17,13 @@ const loginAttempts = new Map();
 const animalStatuses = ['disponivel', 'em_processo', 'adotado'];
 const adoptionStatuses = ['recebida', 'em_analise', 'aprovada', 'recusada'];
 const donationStatuses = ['registrada', 'confirmada', 'cancelada'];
+
+function imageExtension(buffer) {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString() === 'RIFF' && buffer.subarray(8, 12).toString() === 'WEBP') return 'webp';
+  return null;
+}
 
 const mapAnimal = row => row && ({
   id: row.id, name: row.name, species: row.species, sex: row.sex,
@@ -58,6 +67,7 @@ export function createApp(overrides = {}) {
   const config = getConfig(overrides);
   const db = createDatabase(config);
   const app = express();
+  fs.mkdirSync(config.uploadDir, { recursive: true });
 
   app.disable('x-powered-by');
   app.use((req, res, next) => {
@@ -82,6 +92,15 @@ export function createApp(overrides = {}) {
     req.tokenHash = hashToken(token);
     next();
   }
+
+  app.post('/api/uploads/images', requireAdmin, express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '2mb' }), (req, res) => {
+    if (!Buffer.isBuffer(req.body) || !req.body.length) throw new ValidationError('Selecione uma imagem válida.');
+    const extension = imageExtension(req.body);
+    if (!extension) throw new ValidationError('O conteúdo do arquivo não corresponde a JPEG, PNG ou WebP.');
+    const fileName = `${randomUUID()}.${extension}`;
+    fs.writeFileSync(path.join(config.uploadDir, fileName), req.body, { flag: 'wx' });
+    res.status(201).json({ url: `/uploads/${fileName}` });
+  });
 
   app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'patas-na-rua' }));
 
@@ -269,6 +288,7 @@ export function createApp(overrides = {}) {
   });
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
+  app.use('/uploads', express.static(config.uploadDir, { maxAge: '7d', immutable: true }));
   app.use(express.static(publicDir, { extensions: ['html'], maxAge: '1h' }));
   app.get('*path', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 
