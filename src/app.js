@@ -83,7 +83,7 @@ export function createApp(overrides = {}) {
       'Cross-Origin-Resource-Policy': 'same-origin',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     });
     next();
   });
@@ -413,7 +413,14 @@ export function createApp(overrides = {}) {
 
   app.use('/api', (req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
   app.use('/uploads', express.static(config.uploadDir, { maxAge: '7d', immutable: true }));
-  app.use(express.static(publicDir, { extensions: ['html'], maxAge: '1h' }));
+  app.use(express.static(publicDir, {
+    extensions: ['html'],
+    setHeaders(res, filePath) {
+      if (/\.(?:woff2|jpg|jpeg|png|webp)$/i.test(filePath)) res.set('Cache-Control', 'public, max-age=2592000, immutable');
+      else if (/\.html$/i.test(filePath)) res.set('Cache-Control', 'no-cache');
+      else res.set('Cache-Control', 'public, max-age=86400');
+    }
+  }));
   app.get('*path', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
 
   app.use((error, req, res, next) => {
