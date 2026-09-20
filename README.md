@@ -37,6 +37,7 @@ O servidor recusa a inicialização em `NODE_ENV=production` enquanto a senha de
 ```bash
 pnpm test
 pnpm check
+pnpm test:e2e
 ```
 
 Os testes usam um banco SQLite temporário isolado e não alteram os dados locais da aplicação.

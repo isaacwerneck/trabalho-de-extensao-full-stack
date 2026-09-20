@@ -7,13 +7,18 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test": "node --test --test-concurrency=1",
-    "check": "node --check src/server.js && node --check public/app.js"
+    "test": "node --test --test-concurrency=1 test/integration.test.js",
+    "test:e2e": "playwright test",
+    "test:all": "pnpm test && pnpm test:e2e",
+    "check": "node --check src/server.js && node --check public/app.js && node --check playwright.config.js"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
   }
 }
