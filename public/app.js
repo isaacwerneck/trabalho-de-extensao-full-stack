@@ -14,6 +14,7 @@ const labels = {
   pequeno: 'Pequeno', medio: 'Médio', grande: 'Grande', disponivel: 'Disponível', em_processo: 'Em processo', adotado: 'Adotado',
   recebida: 'Recebida', em_analise: 'Em análise', aprovada: 'Aprovada', recusada: 'Recusada',
   registrada: 'Registrada', confirmada: 'Confirmada', cancelada: 'Cancelada', financeira: 'Financeira', item: 'Item'
+  , em_dia: 'Em dia', parcial: 'Parcial', pendente: 'Pendente'
 };
 
 function escapeHtml(value = '') {
@@ -96,7 +97,7 @@ function renderAnimals() {
       <div class="animal-media">${media}<span class="status-badge">Para adoção</span></div>
       <div class="animal-content"><div class="animal-title-row"><h3>${escapeHtml(animal.name)}</h3><span>${escapeHtml(labels[animal.species])}</span></div>
       <div class="animal-tags"><span>${escapeHtml(labels[animal.sex])}</span><span>${animal.ageYears} ${animal.ageYears === 1 ? 'ano' : 'anos'}</span><span>Porte ${escapeHtml(labels[animal.size]).toLowerCase()}</span></div>
-      <p>${escapeHtml(animal.description)}</p><button class="button button-primary" data-adopt="${animal.id}">Quero conhecer ${escapeHtml(animal.name)}</button></div>
+      <p>${escapeHtml(animal.description)}</p><div class="animal-card-actions"><button class="button button-secondary" data-view-animal="${animal.id}">Ver ficha</button><button class="button button-primary" data-adopt="${animal.id}">Quero conhecer</button></div></div>
     </article>`;
   }).join('');
 }
@@ -210,6 +211,21 @@ document.addEventListener('click', async event => {
     openDialog('adoption-dialog');
   }
 
+  const viewAnimal = event.target.closest('[data-view-animal]');
+  if (viewAnimal) {
+    const animal = state.animals.find(item => item.id === Number(viewAnimal.dataset.viewAnimal));
+    $('#animal-detail-title').textContent = animal.name;
+    $('#animal-detail-body').innerHTML = `<div class="animal-detail-grid">
+      <div><span>Vacinação</span><strong>${escapeHtml(labels[animal.vaccinationStatus] ?? 'Não informado')}</strong></div>
+      <div><span>Castração</span><strong>${animal.neutered ? 'Castrado' : 'Não informado'}</strong></div>
+      <div><span>Vermifugação</span><strong>${animal.dewormed ? 'Em dia' : 'Não informado'}</strong></div>
+      <div><span>Perfil</span><strong>${escapeHtml(labels[animal.sex])}, ${animal.ageYears} ${animal.ageYears === 1 ? 'ano' : 'anos'}, porte ${escapeHtml(labels[animal.size]).toLowerCase()}</strong></div>
+    </div><div class="animal-detail-notes"><h3>Sobre ${escapeHtml(animal.name)}</h3><p>${escapeHtml(animal.description)}</p>
+      <h3>Necessidades especiais</h3><p>${escapeHtml(animal.specialNeeds ?? 'Nenhuma necessidade especial informada.')}</p>
+      <h3>Observações de saúde</h3><p>${escapeHtml(animal.healthNotes ?? 'Nenhuma observação adicional informada.')}</p></div>`;
+    openDialog('animal-detail-dialog');
+  }
+
   const editAnimal = event.target.closest('[data-edit-animal]');
   if (editAnimal) {
     const animal = state.admin.animals.find(item => item.id === Number(editAnimal.dataset.editAnimal));
@@ -278,7 +294,7 @@ $('#login-form').addEventListener('submit', async event => {
 });
 
 $('#animal-form').addEventListener('submit', async event => {
-  event.preventDefault(); const form = event.currentTarget; feedback(form); setBusy(form, true); const data = formData(form); const id = data.id; delete data.id;
+  event.preventDefault(); const form = event.currentTarget; feedback(form); setBusy(form, true); const data = formData(form); const id = data.id; delete data.id; data.neutered = form.elements.neutered.checked; data.dewormed = form.elements.dewormed.checked;
   try { await api(id ? `/api/animals/${id}` : '/api/animals', { method: id ? 'PUT' : 'POST', body: JSON.stringify(data) }); form.closest('dialog').close(); toast(id ? 'Animal atualizado.' : 'Animal cadastrado.'); await Promise.all([loadAdmin(), loadPublic()]); }
   catch (error) { feedback(form, error.message); } finally { setBusy(form, false); }
 });

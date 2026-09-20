@@ -34,6 +34,11 @@ const schema = `
     size TEXT NOT NULL CHECK(size IN ('pequeno','medio','grande')),
     description TEXT NOT NULL,
     photo_url TEXT,
+    vaccination_status TEXT NOT NULL DEFAULT 'nao_informado' CHECK(vaccination_status IN ('nao_informado','em_dia','parcial','pendente')),
+    neutered INTEGER NOT NULL DEFAULT 0 CHECK(neutered IN (0,1)),
+    dewormed INTEGER NOT NULL DEFAULT 0 CHECK(dewormed IN (0,1)),
+    special_needs TEXT,
+    health_notes TEXT,
     status TEXT NOT NULL DEFAULT 'disponivel' CHECK(status IN ('disponivel','em_processo','adotado')),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -85,8 +90,23 @@ export function createDatabase(config) {
   const db = new DatabaseSync(config.databasePath);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   db.exec(schema);
+  migrate(db);
   seed(db, config);
   return db;
+}
+
+function migrate(db) {
+  const columns = new Set(db.prepare('PRAGMA table_info(animals)').all().map(column => column.name));
+  const migrations = [
+    ['vaccination_status', "TEXT NOT NULL DEFAULT 'nao_informado' CHECK(vaccination_status IN ('nao_informado','em_dia','parcial','pendente'))"],
+    ['neutered', 'INTEGER NOT NULL DEFAULT 0 CHECK(neutered IN (0,1))'],
+    ['dewormed', 'INTEGER NOT NULL DEFAULT 0 CHECK(dewormed IN (0,1))'],
+    ['special_needs', 'TEXT'],
+    ['health_notes', 'TEXT']
+  ];
+  for (const [name, definition] of migrations) {
+    if (!columns.has(name)) db.exec(`ALTER TABLE animals ADD COLUMN ${name} ${definition}`);
+  }
 }
 
 function seed(db, config) {
@@ -116,13 +136,14 @@ function seedAnimalCatalog(db) {
 
   if (!db.prepare('SELECT 1 FROM animals LIMIT 1').get()) {
     const insert = db.prepare(`INSERT INTO animals
-      (name,species,sex,age_years,size,description,photo_url,status) VALUES (?,?,?,?,?,?,?,?)`);
-    insert.run('Cacau', 'cao', 'femea', 3, 'medio', 'Doce, companheira e apaixonada por passeios. Convive bem com adultos e procura uma casa com rotina ativa.', '/assets/animals/cacau.jpg', 'disponivel');
-    insert.run('Nino', 'cao', 'macho', 2, 'pequeno', 'Curioso, brincalhão e muito sociável. Gosta de companhia e se adapta bem a ambientes menores.', '/assets/animals/nino.jpg', 'disponivel');
-    insert.run('Joca', 'cao', 'macho', 4, 'medio', 'Calmo e observador, adora carinho e caminhadas tranquilas. Precisa de uma família paciente nos primeiros dias.', '/assets/animals/joca.jpg', 'em_processo');
-    insert.run('Pipoca', 'gato', 'femea', 1, 'pequeno', 'Jovem, curiosa e cheia de personalidade. Adora brinquedos, lugares altos e uma boa janela ensolarada.', '/assets/animals/pipoca.jpg', 'disponivel');
-    insert.run('Zeca', 'gato', 'macho', 2, 'pequeno', 'Carinhoso e tranquilo, costuma pedir colo quando ganha confiança. Está acostumado a viver dentro de casa.', '/assets/animals/zeca.jpg', 'disponivel');
-    insert.run('Amora', 'gato', 'femea', 3, 'pequeno', 'Gentil e independente, gosta de ambientes silenciosos e já está em adaptação com uma possível família.', '/assets/animals/amora.jpg', 'em_processo');
+      (name,species,sex,age_years,size,description,photo_url,vaccination_status,neutered,dewormed,special_needs,health_notes,status)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    insert.run('Cacau', 'cao', 'femea', 3, 'medio', 'Doce, companheira e apaixonada por passeios. Convive bem com adultos e procura uma casa com rotina ativa.', '/assets/animals/cacau.jpg', 'em_dia', 1, 1, null, 'Acompanhamento veterinário preventivo em dia.', 'disponivel');
+    insert.run('Nino', 'cao', 'macho', 2, 'pequeno', 'Curioso, brincalhão e muito sociável. Gosta de companhia e se adapta bem a ambientes menores.', '/assets/animals/nino.jpg', 'em_dia', 1, 1, null, null, 'disponivel');
+    insert.run('Joca', 'cao', 'macho', 4, 'medio', 'Calmo e observador, adora carinho e caminhadas tranquilas. Precisa de uma família paciente nos primeiros dias.', '/assets/animals/joca.jpg', 'parcial', 1, 1, null, 'Aguardando reforço anual da vacina múltipla.', 'em_processo');
+    insert.run('Pipoca', 'gato', 'femea', 1, 'pequeno', 'Jovem, curiosa e cheia de personalidade. Adora brinquedos, lugares altos e uma boa janela ensolarada.', '/assets/animals/pipoca.jpg', 'em_dia', 1, 1, null, null, 'disponivel');
+    insert.run('Zeca', 'gato', 'macho', 2, 'pequeno', 'Carinhoso e tranquilo, costuma pedir colo quando ganha confiança. Está acostumado a viver dentro de casa.', '/assets/animals/zeca.jpg', 'em_dia', 1, 1, 'Prefere um lar sem acesso à rua.', 'Sem restrições clínicas conhecidas.', 'disponivel');
+    insert.run('Amora', 'gato', 'femea', 3, 'pequeno', 'Gentil e independente, gosta de ambientes silenciosos e já está em adaptação com uma possível família.', '/assets/animals/amora.jpg', 'em_dia', 1, 1, null, null, 'em_processo');
   }
 
   db.prepare(`INSERT INTO app_metadata (key,value) VALUES ('demo_catalog_version','2')

@@ -87,13 +87,18 @@ test('valida e executa o CRUD de animais', async () => {
   assert.equal(invalid.response.status, 400);
   const created = await request('/api/animals', { method: 'POST', auth: true, body: {
     name: 'Amora', species: 'cao', sex: 'femea', ageYears: 3, size: 'medio',
-    description: 'Dócil, vacinada e muito companheira durante os passeios.', photoUrl: '', status: 'disponivel'
+    description: 'Dócil, vacinada e muito companheira durante os passeios.', photoUrl: '', status: 'disponivel',
+    vaccinationStatus: 'em_dia', neutered: true, dewormed: true,
+    specialNeeds: 'Precisa de passeios leves.', healthNotes: 'Avaliação veterinária realizada recentemente.'
   } });
   assert.equal(created.response.status, 201);
   animalId = created.payload.id;
   const updated = await request(`/api/animals/${animalId}`, { method: 'PUT', auth: true, body: { ...created.payload, ageYears: 3.5 } });
   assert.equal(updated.response.status, 200);
   assert.equal(updated.payload.ageYears, 3.5);
+  assert.equal(updated.payload.vaccinationStatus, 'em_dia');
+  assert.equal(updated.payload.neutered, true);
+  assert.equal(updated.payload.specialNeeds, 'Precisa de passeios leves.');
 });
 
 test('recebe uma adoção e aplica suas regras de status', async () => {

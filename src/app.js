@@ -19,7 +19,10 @@ const donationStatuses = ['registrada', 'confirmada', 'cancelada'];
 const mapAnimal = row => row && ({
   id: row.id, name: row.name, species: row.species, sex: row.sex,
   ageYears: row.age_years, size: row.size, description: row.description,
-  photoUrl: row.photo_url, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at
+  photoUrl: row.photo_url, vaccinationStatus: row.vaccination_status,
+  neutered: Boolean(row.neutered), dewormed: Boolean(row.dewormed),
+  specialNeeds: row.special_needs, healthNotes: row.health_notes,
+  status: row.status, createdAt: row.created_at, updatedAt: row.updated_at
 });
 
 const mapNeed = row => row && ({
@@ -114,16 +117,18 @@ export function createApp(overrides = {}) {
 
   app.post('/api/animals', requireAdmin, (req, res) => {
     const a = animalPayload(req.body);
-    const result = db.prepare(`INSERT INTO animals (name,species,sex,age_years,size,description,photo_url,status)
-      VALUES (?,?,?,?,?,?,?,?)`).run(a.name, a.species, a.sex, a.ageYears, a.size, a.description, a.photoUrl, a.status);
+    const result = db.prepare(`INSERT INTO animals
+      (name,species,sex,age_years,size,description,photo_url,vaccination_status,neutered,dewormed,special_needs,health_notes,status)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(a.name, a.species, a.sex, a.ageYears, a.size, a.description, a.photoUrl,
+        a.vaccinationStatus, a.neutered, a.dewormed, a.specialNeeds, a.healthNotes, a.status);
     res.status(201).json(mapAnimal(db.prepare('SELECT * FROM animals WHERE id = ?').get(result.lastInsertRowid)));
   });
 
   app.put('/api/animals/:id', requireAdmin, (req, res) => {
     const id = readId(req.params.id);
     const a = animalPayload(req.body);
-    const result = db.prepare(`UPDATE animals SET name=?,species=?,sex=?,age_years=?,size=?,description=?,photo_url=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
-      .run(a.name, a.species, a.sex, a.ageYears, a.size, a.description, a.photoUrl, a.status, id);
+    const result = db.prepare(`UPDATE animals SET name=?,species=?,sex=?,age_years=?,size=?,description=?,photo_url=?,vaccination_status=?,neutered=?,dewormed=?,special_needs=?,health_notes=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+      .run(a.name, a.species, a.sex, a.ageYears, a.size, a.description, a.photoUrl, a.vaccinationStatus, a.neutered, a.dewormed, a.specialNeeds, a.healthNotes, a.status, id);
     if (!result.changes) throw notFound('Animal');
     res.json(mapAnimal(db.prepare('SELECT * FROM animals WHERE id = ?').get(id)));
   });

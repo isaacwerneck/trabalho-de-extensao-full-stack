@@ -69,6 +69,11 @@ export function animalPayload(body) {
     size: enumeration(body.size, 'Porte', ['pequeno', 'medio', 'grande']),
     description: text(body.description, 'Descrição', { min: 20, max: 800 }),
     photoUrl: webUrl(body.photoUrl, 'URL da foto'),
+    vaccinationStatus: enumeration(body.vaccinationStatus ?? 'nao_informado', 'Vacinação', ['nao_informado', 'em_dia', 'parcial', 'pendente']),
+    neutered: boolean(body.neutered),
+    dewormed: boolean(body.dewormed),
+    specialNeeds: text(body.specialNeeds, 'Necessidades especiais', { max: 500, optional: true }),
+    healthNotes: text(body.healthNotes, 'Observações de saúde', { max: 1000, optional: true }),
     status: enumeration(body.status, 'Status', ['disponivel', 'em_processo', 'adotado'])
   };
 }
