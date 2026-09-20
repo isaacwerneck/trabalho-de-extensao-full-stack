@@ -54,7 +54,9 @@
       <div class="filter-bar" role="group" aria-label="Filtrar animais">
         <button class="filter is-active" data-species="">Todos</button><button class="filter" data-species="cao">Cães</button><button class="filter" data-species="gato">Gatos</button><button class="filter" data-species="outro">Outros</button>
       </div>
+      <form id="animal-filters" class="animal-search" role="search"><label>Buscar por nome ou perfil<input name="q" type="search" maxlength="80" placeholder="Ex.: calmo, Pipoca…"></label><label>Sexo<select name="sex"><option value="">Todos</option><option value="femea">Fêmea</option><option value="macho">Macho</option><option value="nao_informado">Não informado</option></select></label><label>Porte<select name="size"><option value="">Todos</option><option value="pequeno">Pequeno</option><option value="medio">Médio</option><option value="grande">Grande</option></select></label><label>Idade mínima<input name="minAge" type="number" min="0" max="40" step="0.1"></label><label>Idade máxima<input name="maxAge" type="number" min="0" max="40" step="0.1"></label><div class="search-actions"><button class="button button-primary" type="submit">Buscar</button><button class="button button-ghost" id="clear-animal-filters" type="button">Limpar</button></div></form>
       <div id="animals-grid" class="animals-grid" aria-live="polite"><div class="loading-card">Carregando histórias…</div></div>
+      <div id="animals-pagination" class="pagination" aria-live="polite"></div>
     </section>
 
     <section class="how-section" id="sobre">

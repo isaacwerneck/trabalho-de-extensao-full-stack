@@ -2,6 +2,9 @@ const state = {
   token: sessionStorage.getItem('patasToken'),
   user: null,
   species: '',
+  filters: { q: '', sex: '', size: '', minAge: '', maxAge: '' },
+  page: 1,
+  pagination: null,
   animals: [],
   needs: [],
   admin: { animals: [], adoptions: [], needs: [], donations: [] }
@@ -76,21 +79,36 @@ function setBusy(form, busy) {
 
 async function loadPublic() {
   try {
-    const [stats, animals, needs] = await Promise.all([
-      api('/api/stats'), api(`/api/animals?status=disponivel${state.species ? `&species=${state.species}` : ''}`), api('/api/needs')
+    const animalQuery = new URLSearchParams({ status: 'disponivel', page: state.page, limit: 8 });
+    if (state.species) animalQuery.set('species', state.species);
+    Object.entries(state.filters).forEach(([key, value]) => { if (value !== '') animalQuery.set(key, value); });
+    const [stats, animalResult, needs] = await Promise.all([
+      api('/api/stats'), api(`/api/animals?${animalQuery}`), api('/api/needs')
     ]);
-    state.animals = animals;
+    state.animals = animalResult.items;
+    state.pagination = animalResult.pagination;
     state.needs = needs;
     $('#stat-animals').textContent = stats.availableAnimals;
     $('#stat-adoptions').textContent = stats.completedAdoptions;
     $('#stat-needs').textContent = stats.activeNeeds;
     $('#stat-donations').textContent = formatCurrency(stats.confirmedDonations);
     renderAnimals();
+    renderAnimalPagination();
     renderNeeds();
   } catch (error) {
     $('#animals-grid').innerHTML = `<div class="empty-state">${escapeHtml(error.message)} <button class="button button-ghost button-small" data-retry>Recarregar</button></div>`;
     $('#needs-grid').innerHTML = '<div class="empty-state">Não foi possível carregar as necessidades.</div>';
   }
+}
+
+function renderAnimalPagination() {
+  const container = $('#animals-pagination');
+  const pagination = state.pagination;
+  if (!pagination || pagination.totalPages <= 1) {
+    container.innerHTML = pagination ? `<span>${pagination.total} ${pagination.total === 1 ? 'animal encontrado' : 'animais encontrados'}</span>` : '';
+    return;
+  }
+  container.innerHTML = `<button class="button button-ghost button-small" data-page="${pagination.page - 1}" ${pagination.page <= 1 ? 'disabled' : ''}>Anterior</button><span>Página ${pagination.page} de ${pagination.totalPages} • ${pagination.total} animais</span><button class="button button-ghost button-small" data-page="${pagination.page + 1}" ${pagination.page >= pagination.totalPages ? 'disabled' : ''}>Próxima</button>`;
 }
 
 function renderAnimals() {
@@ -211,6 +229,8 @@ document.addEventListener('click', async event => {
     if (openButton.closest('#main-nav')) closeMenu();
   }
   if (event.target.closest('[data-retry]')) loadPublic();
+  const pageButton = event.target.closest('[data-page]');
+  if (pageButton && !pageButton.disabled) { state.page = Number(pageButton.dataset.page); await loadPublic(); $('#animals-title').scrollIntoView({ behavior: 'smooth' }); }
 
   const adoptButton = event.target.closest('[data-adopt]');
   if (adoptButton) {
@@ -274,7 +294,22 @@ $('#menu-toggle').addEventListener('click', event => {
 });
 $$('#main-nav a').forEach(link => link.addEventListener('click', closeMenu));
 $$('.dialog-close').forEach(button => button.addEventListener('click', event => { event.preventDefault(); button.closest('dialog').close(); }));
-$$('.filter').forEach(button => button.addEventListener('click', async () => { $$('.filter').forEach(item => item.classList.remove('is-active')); button.classList.add('is-active'); state.species = button.dataset.species; $('#animals-grid').innerHTML = '<div class="loading-card">Atualizando lista…</div>'; await loadPublic(); }));
+$$('.filter').forEach(button => button.addEventListener('click', async () => { $$('.filter').forEach(item => item.classList.remove('is-active')); button.classList.add('is-active'); state.species = button.dataset.species; state.page = 1; $('#animals-grid').innerHTML = '<div class="loading-card">Atualizando lista…</div>'; await loadPublic(); }));
+
+$('#animal-filters').addEventListener('submit', async event => {
+  event.preventDefault();
+  const data = formData(event.currentTarget);
+  state.filters = { q: data.q.trim(), sex: data.sex, size: data.size, minAge: data.minAge, maxAge: data.maxAge };
+  state.page = 1;
+  await loadPublic();
+});
+
+$('#clear-animal-filters').addEventListener('click', async () => {
+  $('#animal-filters').reset();
+  state.filters = { q: '', sex: '', size: '', minAge: '', maxAge: '' };
+  state.page = 1;
+  await loadPublic();
+});
 
 $('#donation-form').elements.type.addEventListener('change', event => {
   const financial = event.target.value === 'financeira';

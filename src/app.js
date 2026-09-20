@@ -8,7 +8,7 @@ import { createSessionToken, hashToken, verifyPassword } from './auth.js';
 import { getConfig } from './config.js';
 import {
   ValidationError, adoptionPayload, animalPayload, donationPayload, email,
-  enumeration, integer, needPayload, text
+  enumeration, integer, needPayload, number, text
 } from './validation.js';
 
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public');
@@ -127,8 +127,37 @@ export function createApp(overrides = {}) {
       clauses.push('species = ?');
       params.push(enumeration(req.query.species, 'Espécie', ['cao', 'gato', 'outro']));
     }
+    if (req.query.sex) {
+      clauses.push('sex = ?');
+      params.push(enumeration(req.query.sex, 'Sexo', ['macho', 'femea', 'nao_informado']));
+    }
+    if (req.query.size) {
+      clauses.push('size = ?');
+      params.push(enumeration(req.query.size, 'Porte', ['pequeno', 'medio', 'grande']));
+    }
+    if (req.query.minAge !== undefined) {
+      clauses.push('age_years >= ?');
+      params.push(number(req.query.minAge, 'Idade mínima', { min: 0, max: 40 }));
+    }
+    if (req.query.maxAge !== undefined) {
+      clauses.push('age_years <= ?');
+      params.push(number(req.query.maxAge, 'Idade máxima', { min: 0, max: 40 }));
+    }
+    if (req.query.q) {
+      const search = `%${text(req.query.q, 'Busca', { max: 80 })}%`;
+      clauses.push('(name LIKE ? COLLATE NOCASE OR description LIKE ? COLLATE NOCASE)');
+      params.push(search, search);
+    }
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-    const rows = db.prepare(`SELECT * FROM animals ${where} ORDER BY CASE status WHEN 'disponivel' THEN 0 WHEN 'em_processo' THEN 1 ELSE 2 END, id DESC`).all(...params);
+    const order = "ORDER BY CASE status WHEN 'disponivel' THEN 0 WHEN 'em_processo' THEN 1 ELSE 2 END, id DESC";
+    if (req.query.page !== undefined || req.query.limit !== undefined) {
+      const page = integer(req.query.page ?? 1, 'Página', { min: 1, max: 100000 });
+      const limit = integer(req.query.limit ?? 8, 'Limite', { min: 1, max: 50 });
+      const total = db.prepare(`SELECT COUNT(*) total FROM animals ${where}`).get(...params).total;
+      const rows = db.prepare(`SELECT * FROM animals ${where} ${order} LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
+      return res.json({ items: rows.map(mapAnimal), pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) } });
+    }
+    const rows = db.prepare(`SELECT * FROM animals ${where} ${order}`).all(...params);
     res.json(rows.map(mapAnimal));
   });
 

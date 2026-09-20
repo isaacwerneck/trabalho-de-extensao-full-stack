@@ -92,6 +92,10 @@ h1 em { color: var(--coral); font-style: normal; }
 .filter-bar { display: flex; gap: .6rem; margin-bottom: 2rem; overflow-x: auto; }
 .filter { min-height: 42px; padding: .6rem 1rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: transparent; cursor: pointer; font: 600 .76rem var(--font-accent); }
 .filter.is-active { border-color: var(--forest); color: white; background: var(--forest); }
+.animal-search { display: grid; margin-bottom: 2rem; padding: 1rem; grid-template-columns: 2fr repeat(4, minmax(110px, .7fr)) auto; align-items: end; gap: .75rem; border: 1px solid var(--line); border-radius: 18px; background: var(--cream); }
+.animal-search label { font-size: .72rem; }
+.search-actions { display: flex; gap: .4rem; }
+.pagination { display: flex; min-height: 46px; align-items: center; justify-content: center; gap: 1rem; margin-top: 2rem; color: var(--muted); font: 500 .72rem var(--font-accent); }
 .animals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; }
 .animal-card { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: white; transition: transform .2s ease, box-shadow .2s ease; }
 .animal-card:hover { transform: translateY(-5px); box-shadow: var(--shadow); }
@@ -196,6 +200,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest-2); outli
   .hero-visual { min-height: 520px; }
   .impact-strip { width: calc(100% - 2rem); grid-template-columns: repeat(2, 1fr); }
   .impact-strip div:nth-child(2) { border-right: 0; }
+  .animal-search { grid-template-columns: repeat(2, 1fr); }
   .impact-strip div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
   .animals-grid, .needs-grid { grid-template-columns: repeat(2, 1fr); }
   .how-section { grid-template-columns: 1fr; }
@@ -213,6 +218,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest-2); outli
   .section-heading { align-items: flex-start; flex-direction: column; }
   .animals-grid, .needs-grid { grid-template-columns: 1fr; }
   .animal-detail-grid, .animal-card-actions { grid-template-columns: 1fr; }
+  .animal-search { grid-template-columns: 1fr; }
+  .search-actions .button { flex: 1; }
   .form-grid { grid-template-columns: 1fr; }
   .data-row { grid-template-columns: 1fr; }
   .row-actions { justify-content: flex-start; }

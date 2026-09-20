@@ -64,6 +64,11 @@ test('lista e filtra os animais sem autenticação', async () => {
   assert.ok(all.payload.length >= 3);
   const cats = await request('/api/animals?species=gato');
   assert.ok(cats.payload.every(animal => animal.species === 'gato'));
+  const paginated = await request('/api/animals?status=disponivel&size=pequeno&q=carinhoso&page=1&limit=2');
+  assert.equal(paginated.response.status, 200);
+  assert.equal(paginated.payload.pagination.page, 1);
+  assert.ok(paginated.payload.items.length <= 2);
+  assert.ok(paginated.payload.items.every(animal => animal.status === 'disponivel' && animal.size === 'pequeno'));
 });
 
 test('protege operações administrativas', async () => {
