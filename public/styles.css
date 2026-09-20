@@ -178,6 +178,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest-2); outli
 .admin-panel { max-width: 1280px; margin: 0 auto; padding: 5rem clamp(1.25rem, 4vw, 3.5rem); }
 .admin-header, .admin-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .admin-header h2 { margin-bottom: .4rem; font-size: 3rem; }
+.admin-dashboard { display: grid; margin-top: 2rem; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
+.admin-dashboard article { display: grid; padding: 1.2rem; border: 1px solid var(--line); border-radius: 16px; background: var(--cream); }
+.admin-dashboard span { color: var(--muted); font: 600 .66rem var(--font-accent); text-transform: uppercase; }
+.admin-dashboard strong { margin: .25rem 0; color: var(--forest); font: 750 1.8rem var(--font-display); }
+.admin-dashboard small { color: var(--muted); }
 .admin-tabs { display: flex; gap: .5rem; margin: 2rem 0; padding-bottom: .5rem; overflow-x: auto; border-bottom: 1px solid var(--line); }
 .admin-tabs { scrollbar-width: none; }
 .admin-tabs::-webkit-scrollbar { display: none; }
@@ -201,6 +206,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest-2); outli
   .impact-strip { width: calc(100% - 2rem); grid-template-columns: repeat(2, 1fr); }
   .impact-strip div:nth-child(2) { border-right: 0; }
   .animal-search { grid-template-columns: repeat(2, 1fr); }
+  .admin-dashboard { grid-template-columns: repeat(2, 1fr); }
   .impact-strip div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
   .animals-grid, .needs-grid { grid-template-columns: repeat(2, 1fr); }
   .how-section { grid-template-columns: 1fr; }
@@ -219,6 +225,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--forest-2); outli
   .animals-grid, .needs-grid { grid-template-columns: 1fr; }
   .animal-detail-grid, .animal-card-actions { grid-template-columns: 1fr; }
   .animal-search { grid-template-columns: 1fr; }
+  .admin-dashboard { grid-template-columns: 1fr; }
   .search-actions .button { flex: 1; }
   .form-grid { grid-template-columns: 1fr; }
   .data-row { grid-template-columns: 1fr; }

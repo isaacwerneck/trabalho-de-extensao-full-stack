@@ -185,6 +185,12 @@ test('registra, confirma e contabiliza uma doação', async () => {
   assert.equal(confirmed.payload.status, 'confirmada');
   const stats = await request('/api/stats');
   assert.equal(stats.payload.confirmedDonations, 125.5);
+  const dashboard = await request('/api/admin/dashboard', { auth: true });
+  assert.equal(dashboard.response.status, 200);
+  assert.ok(dashboard.payload.animals.total >= 1);
+  assert.equal(dashboard.payload.adoptions.aprovada, 1);
+  assert.equal(dashboard.payload.donations.confirmedAmount, 125.5);
+  assert.equal(typeof dashboard.payload.needs.averageProgress, 'number');
 });
 
 test('encerra a sessão e invalida o token', async () => {

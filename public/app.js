@@ -7,7 +7,7 @@ const state = {
   pagination: null,
   animals: [],
   needs: [],
-  admin: { animals: [], adoptions: [], needs: [], donations: [] }
+  admin: { dashboard: null, animals: [], adoptions: [], needs: [], donations: [] }
 };
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
@@ -183,14 +183,22 @@ async function showAdmin() {
 
 async function loadAdmin() {
   try {
-    const [animals, adoptions, needs, donations] = await Promise.all([
-      api('/api/animals'), api('/api/adoptions'), api('/api/admin/needs'), api('/api/donations')
+    const [dashboard, animals, adoptions, needs, donations] = await Promise.all([
+      api('/api/admin/dashboard'), api('/api/animals'), api('/api/adoptions'), api('/api/admin/needs'), api('/api/donations')
     ]);
-    state.admin = { animals, adoptions, needs, donations };
-    renderAdminAnimals(); renderAdminAdoptions(); renderAdminNeeds(); renderAdminDonations();
+    state.admin = { dashboard, animals, adoptions, needs, donations };
+    renderAdminDashboard(); renderAdminAnimals(); renderAdminAdoptions(); renderAdminNeeds(); renderAdminDonations();
   } catch (error) {
     toast(error.message);
   }
+}
+
+function renderAdminDashboard() {
+  const d = state.admin.dashboard;
+  $('#admin-dashboard').innerHTML = `<article><span>Animais</span><strong>${d.animals.total}</strong><small>${d.animals.disponivel} disponíveis • ${d.animals.adotado} adotados</small></article>
+    <article><span>Solicitações</span><strong>${d.adoptions.total}</strong><small>${d.adoptions.recebida} novas • ${d.adoptions.em_analise} em análise</small></article>
+    <article><span>Doações</span><strong>${formatCurrency(d.donations.confirmedAmount)}</strong><small>${d.donations.confirmedItems} itens confirmados • ${d.donations.pending} pendentes</small></article>
+    <article><span>Necessidades</span><strong>${d.needs.active}</strong><small>${d.needs.averageProgress}% de progresso médio</small></article>`;
 }
 
 function renderAdminAnimals() {

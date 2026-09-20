@@ -73,6 +73,7 @@
 
     <section id="admin-panel" class="admin-panel" hidden aria-labelledby="admin-title">
       <div class="admin-header"><div><span class="eyebrow">Gestão</span><h2 id="admin-title">Painel da equipe</h2><p id="admin-greeting"></p></div><button id="logout-button" class="button button-ghost">Sair</button></div>
+      <div id="admin-dashboard" class="admin-dashboard" aria-label="Resumo gerencial"></div>
       <div class="admin-tabs" role="tablist" aria-label="Áreas administrativas"><button role="tab" aria-selected="true" data-admin-tab="animals">Animais</button><button role="tab" aria-selected="false" data-admin-tab="adoptions">Adoções</button><button role="tab" aria-selected="false" data-admin-tab="needs">Necessidades</button><button role="tab" aria-selected="false" data-admin-tab="donations">Doações</button></div>
       <section class="admin-view" data-admin-view="animals"><div class="admin-toolbar"><h3>Animais cadastrados</h3><button class="button button-primary" id="new-animal">Novo animal</button></div><div id="admin-animals" class="data-list"></div></section>
       <section class="admin-view" data-admin-view="adoptions" hidden><div class="admin-toolbar"><h3>Solicitações de adoção</h3></div><div id="admin-adoptions" class="data-list"></div></section>

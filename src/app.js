@@ -116,6 +116,29 @@ export function createApp(overrides = {}) {
     res.json({ availableAnimals: animals, completedAdoptions: adoptions, activeNeeds: needs, confirmedDonations: donations });
   });
 
+  app.get('/api/admin/dashboard', requireAdmin, (req, res) => {
+    const animalRows = db.prepare('SELECT status, COUNT(*) total FROM animals GROUP BY status').all();
+    const adoptionRows = db.prepare('SELECT status, COUNT(*) total FROM adoption_applications GROUP BY status').all();
+    const animals = Object.fromEntries(animalStatuses.map(status => [status, 0]));
+    const adoptions = Object.fromEntries(adoptionStatuses.map(status => [status, 0]));
+    animalRows.forEach(row => { animals[row.status] = row.total; });
+    adoptionRows.forEach(row => { adoptions[row.status] = row.total; });
+    const donation = db.prepare(`SELECT
+      COALESCE(SUM(CASE WHEN type='financeira' AND status='confirmada' THEN amount ELSE 0 END),0) confirmed_amount,
+      COALESCE(SUM(CASE WHEN type='item' AND status='confirmada' THEN 1 ELSE 0 END),0) confirmed_items,
+      COALESCE(SUM(CASE WHEN status='registrada' THEN 1 ELSE 0 END),0) pending FROM donations`).get();
+    const needs = db.prepare(`SELECT COUNT(*) total,
+      SUM(CASE WHEN active=1 THEN 1 ELSE 0 END) active,
+      COALESCE(AVG(CASE WHEN active=1 THEN MIN(current_quantity / target_quantity, 1) * 100 END),0) average_progress
+      FROM needs`).get();
+    res.json({
+      animals: { ...animals, total: Object.values(animals).reduce((sum, value) => sum + value, 0) },
+      adoptions: { ...adoptions, total: Object.values(adoptions).reduce((sum, value) => sum + value, 0) },
+      donations: { confirmedAmount: donation.confirmed_amount, confirmedItems: donation.confirmed_items, pending: donation.pending },
+      needs: { total: needs.total, active: needs.active, averageProgress: Math.round(needs.average_progress) }
+    });
+  });
+
   app.get('/api/animals', (req, res) => {
     const clauses = [];
     const params = [];
