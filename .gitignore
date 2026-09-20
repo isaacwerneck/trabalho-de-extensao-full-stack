@@ -1,0 +1,10 @@
+node_modules/
+data/*.sqlite
+data/*.sqlite-*
+.env
+.DS_Store
+coverage/
+
+# Materiais internos e levantamentos não publicados
+*.md
+!README.md

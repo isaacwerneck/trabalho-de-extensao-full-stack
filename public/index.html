@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Conheça animais para adoção e ajude o projeto Patas na Rua.">
+  <meta name="theme-color" content="#123d3b">
+  <title>Patas na Rua — cuidado que encontra um lar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=IBM+Plex+Mono:wght@500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=3">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+  <header class="site-header">
+    <a class="brand" href="#inicio" aria-label="Patas na Rua, início">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 29c-10 0-20 9-20 18 0 7 6 11 12 8 5-2 11-2 16 0 6 3 12-1 12-8 0-9-10-18-20-18ZM16 25c4-1 6-6 4-11S13 7 9 9s-5 7-3 11 6 7 10 5Zm32 0c4 2 8-1 10-5s1-9-3-11-9 0-11 5 0 10 4 11ZM27 18c5 0 8-5 7-10S29 0 25 1s-7 5-6 10 4 8 8 7Zm10 0c4 1 7-2 8-7s-2-9-6-10-8 2-9 7 2 10 7 10Z"/></svg>
+      <span>Patas na Rua</span>
+    </a>
+    <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="main-nav"><span></span><span></span><span></span><span class="sr-only">Abrir menu</span></button>
+    <nav id="main-nav" class="main-nav" aria-label="Navegação principal">
+      <a href="#adocao">Adote</a><a href="#necessidades">Necessidades</a><a href="#sobre">Sobre</a>
+      <button class="button button-ghost" data-open="donation-dialog">Quero ajudar</button>
+      <button class="admin-link" data-open="login-dialog">Área da equipe</button>
+    </nav>
+  </header>
+
+  <main id="conteudo">
+    <section class="hero" id="inicio">
+      <div class="hero-copy">
+        <span class="eyebrow">Adoção responsável • Rio de Janeiro</span>
+        <h1>Todo encontro pode mudar <em>duas vidas.</em></h1>
+        <p>Conectamos animais acolhidos a famílias preparadas para cuidar. Conheça cada história e dê o primeiro passo com responsabilidade.</p>
+        <div class="hero-actions"><a class="button button-primary" href="#adocao">Conhecer os animais</a><button class="button button-secondary" data-open="donation-dialog">Fazer uma doação</button></div>
+        <div class="trust-note"><span class="avatars" aria-hidden="true"><i>🐶</i><i>🐱</i><i>🐾</i></span><span>Triagem cuidadosa e acompanhamento em cada adoção.</span></div>
+      </div>
+      <div class="hero-visual" aria-label="Ilustração de animais acolhidos">
+        <div class="sun-shape"></div><div class="pet-portrait pet-dog">🐕</div><div class="pet-portrait pet-cat">🐈</div>
+        <div class="floating-note"><strong>+ cuidado</strong><span>— abandono</span></div>
+      </div>
+    </section>
+
+    <section class="impact-strip" aria-label="Indicadores do projeto">
+      <div><strong id="stat-animals">—</strong><span>animais disponíveis</span></div>
+      <div><strong id="stat-adoptions">—</strong><span>adoções concluídas</span></div>
+      <div><strong id="stat-needs">—</strong><span>necessidades ativas</span></div>
+      <div><strong id="stat-donations">—</strong><span>em doações confirmadas</span></div>
+    </section>
+
+    <section class="section animals-section" id="adocao" aria-labelledby="animals-title">
+      <div class="section-heading"><div><span class="eyebrow">Prontos para uma família</span><h2 id="animals-title">Conheça quem está esperando</h2></div><p>Cada perfil é acompanhado pela equipe. Filtre, conheça e envie uma solicitação sem compromisso.</p></div>
+      <div class="filter-bar" role="group" aria-label="Filtrar animais">
+        <button class="filter is-active" data-species="">Todos</button><button class="filter" data-species="cao">Cães</button><button class="filter" data-species="gato">Gatos</button><button class="filter" data-species="outro">Outros</button>
+      </div>
+      <div id="animals-grid" class="animals-grid" aria-live="polite"><div class="loading-card">Carregando histórias…</div></div>
+    </section>
+
+    <section class="how-section" id="sobre">
+      <div class="how-intro"><span class="eyebrow light">Adoção é compromisso</span><h2>Um processo simples, uma decisão consciente.</h2><p>Nossa triagem existe para criar encontros seguros e duradouros.</p></div>
+      <ol class="steps"><li><span>01</span><div><h3>Conheça</h3><p>Veja os perfis e encontre um animal compatível com sua rotina.</p></div></li><li><span>02</span><div><h3>Converse</h3><p>Conte sobre você. Nossa equipe analisa e entra em contato.</p></div></li><li><span>03</span><div><h3>Acolha</h3><p>Após a entrevista, organizamos uma adaptação responsável.</p></div></li></ol>
+    </section>
+
+    <section class="section needs-section" id="necessidades" aria-labelledby="needs-title">
+      <div class="section-heading"><div><span class="eyebrow">Ajuda que chega onde importa</span><h2 id="needs-title">Necessidades do momento</h2></div><button class="button button-primary" data-open="donation-dialog">Posso ajudar</button></div>
+      <div id="needs-grid" class="needs-grid" aria-live="polite"><div class="loading-card">Carregando necessidades…</div></div>
+    </section>
+
+    <section class="cta-section"><div><span class="eyebrow light">Faça parte dessa rede</span><h2>Nem toda ajuda precisa começar com uma adoção.</h2></div><p>Ração, medicamentos, itens de conforto ou contribuição financeira: cada gesto mantém nosso cuidado em movimento.</p><button class="button button-light" data-open="donation-dialog">Registrar uma doação</button></section>
+
+    <section id="admin-panel" class="admin-panel" hidden aria-labelledby="admin-title">
+      <div class="admin-header"><div><span class="eyebrow">Gestão</span><h2 id="admin-title">Painel da equipe</h2><p id="admin-greeting"></p></div><button id="logout-button" class="button button-ghost">Sair</button></div>
+      <div class="admin-tabs" role="tablist" aria-label="Áreas administrativas"><button role="tab" aria-selected="true" data-admin-tab="animals">Animais</button><button role="tab" aria-selected="false" data-admin-tab="adoptions">Adoções</button><button role="tab" aria-selected="false" data-admin-tab="needs">Necessidades</button><button role="tab" aria-selected="false" data-admin-tab="donations">Doações</button></div>
+      <section class="admin-view" data-admin-view="animals"><div class="admin-toolbar"><h3>Animais cadastrados</h3><button class="button button-primary" id="new-animal">Novo animal</button></div><div id="admin-animals" class="data-list"></div></section>
+      <section class="admin-view" data-admin-view="adoptions" hidden><div class="admin-toolbar"><h3>Solicitações de adoção</h3></div><div id="admin-adoptions" class="data-list"></div></section>
+      <section class="admin-view" data-admin-view="needs" hidden><div class="admin-toolbar"><h3>Necessidades</h3><button class="button button-primary" id="new-need">Nova necessidade</button></div><div id="admin-needs" class="data-list"></div></section>
+      <section class="admin-view" data-admin-view="donations" hidden><div class="admin-toolbar"><h3>Doações registradas</h3></div><div id="admin-donations" class="data-list"></div></section>
+    </section>
+  </main>
+
+  <footer><a class="brand footer-brand" href="#inicio"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 29c-10 0-20 9-20 18 0 7 6 11 12 8 5-2 11-2 16 0 6 3 12-1 12-8 0-9-10-20-20-29ZM16 25c4-1 6-6 4-11S13 7 9 9s-5 7-3 11 6 7 10 5Zm32 0c4 2 8-1 10-5s1-9-3-11-9 0-11 5 0 10 4 11Z"/></svg><span>Patas na Rua</span></a><p>Cuidado responsável, informação clara e encontros que transformam.</p><small>© <span id="year"></span> Patas na Rua • Projeto de Extensão em Software Full Stack</small></footer>
+
+  <dialog id="adoption-dialog" class="dialog"><form method="dialog" class="dialog-shell" id="adoption-form"><button class="dialog-close" value="cancel" aria-label="Fechar">×</button><span class="eyebrow">Adoção responsável</span><h2>Conte um pouco sobre você</h2><p id="adoption-animal-label">Solicitação de adoção</p><input type="hidden" name="animalId"><div class="form-grid"><label>Nome completo<input name="applicantName" required minlength="3" autocomplete="name"></label><label>E-mail<input name="email" type="email" required autocomplete="email"></label><label>Telefone<input name="phone" required minlength="8" autocomplete="tel"></label><label>Moradia<select name="housingType" required><option value="">Selecione</option><option value="casa">Casa</option><option value="apartamento">Apartamento</option><option value="outro">Outro</option></select></label></div><label class="check"><input type="checkbox" name="hasOtherPets"> Já tenho outros animais</label><label>Por que deseja adotar?<textarea name="reason" required minlength="30" rows="4" placeholder="Conte sobre sua rotina e o lar que pretende oferecer."></textarea></label><div class="form-feedback" aria-live="polite"></div><button class="button button-primary full" type="submit">Enviar solicitação</button></form></dialog>
+
+  <dialog id="donation-dialog" class="dialog"><form method="dialog" class="dialog-shell" id="donation-form"><button class="dialog-close" value="cancel" aria-label="Fechar">×</button><span class="eyebrow">Sua ajuda importa</span><h2>Registrar intenção de doação</h2><div class="form-grid"><label>Nome completo<input name="donorName" required minlength="3" autocomplete="name"></label><label>E-mail<input name="email" type="email" required autocomplete="email"></label><label>Tipo de doação<select name="type" required><option value="financeira">Financeira</option><option value="item">Item</option></select></label><label data-donation-field="amount">Valor (R$)<input name="amount" type="number" min="0.01" step="0.01" value="10"></label><label data-donation-field="item" hidden>Descrição do item<input name="itemDescription" placeholder="Ex.: 10 kg de ração"></label></div><p class="form-note">Não há cobrança on-line. A equipe entrará em contato para combinar a entrega ou contribuição.</p><div class="form-feedback" aria-live="polite"></div><button class="button button-primary full" type="submit">Registrar doação</button></form></dialog>
+
+  <dialog id="login-dialog" class="dialog dialog-small"><form method="dialog" class="dialog-shell" id="login-form"><button class="dialog-close" value="cancel" aria-label="Fechar">×</button><span class="eyebrow">Acesso restrito</span><h2>Área da equipe</h2><label>E-mail<input name="email" type="email" required autocomplete="username"></label><label>Senha<input name="password" type="password" required minlength="8" autocomplete="current-password"></label><div class="form-feedback" aria-live="polite"></div><button class="button button-primary full" type="submit">Entrar</button></form></dialog>
+
+  <dialog id="animal-dialog" class="dialog"><form method="dialog" class="dialog-shell" id="animal-form"><button class="dialog-close" value="cancel" aria-label="Fechar">×</button><span class="eyebrow">Cadastro</span><h2 id="animal-dialog-title">Novo animal</h2><input type="hidden" name="id"><div class="form-grid"><label>Nome<input name="name" required maxlength="80"></label><label>Espécie<select name="species" required><option value="cao">Cão</option><option value="gato">Gato</option><option value="outro">Outro</option></select></label><label>Sexo<select name="sex" required><option value="femea">Fêmea</option><option value="macho">Macho</option><option value="nao_informado">Não informado</option></select></label><label>Idade em anos<input name="ageYears" type="number" min="0" max="40" step="0.1" required></label><label>Porte<select name="size" required><option value="pequeno">Pequeno</option><option value="medio">Médio</option><option value="grande">Grande</option></select></label><label>Status<select name="status" required><option value="disponivel">Disponível</option><option value="em_processo">Em processo</option><option value="adotado">Adotado</option></select></label></div><label>URL de foto (opcional)<input name="photoUrl" type="url"></label><label>Descrição<textarea name="description" minlength="20" maxlength="800" rows="4" required></textarea></label><div class="form-feedback" aria-live="polite"></div><button class="button button-primary full" type="submit">Salvar animal</button></form></dialog>
+
+  <dialog id="need-dialog" class="dialog"><form method="dialog" class="dialog-shell" id="need-form"><button class="dialog-close" value="cancel" aria-label="Fechar">×</button><span class="eyebrow">Gestão</span><h2 id="need-dialog-title">Nova necessidade</h2><input type="hidden" name="id"><div class="form-grid"><label>Título<input name="title" required maxlength="120"></label><label>Prioridade<select name="priority" required><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option></select></label><label>Meta<input name="targetQuantity" type="number" min="1" step="0.1" required></label><label>Quantidade atual<input name="currentQuantity" type="number" min="0" step="0.1" required value="0"></label><label>Unidade<input name="unit" required maxlength="30" placeholder="kg, unidades…"></label><label class="check"><input name="active" type="checkbox" checked> Necessidade ativa</label></div><label>Descrição<textarea name="description" minlength="10" maxlength="500" rows="3" required></textarea></label><div class="form-feedback" aria-live="polite"></div><button class="button button-primary full" type="submit">Salvar necessidade</button></form></dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
