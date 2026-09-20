@@ -42,6 +42,16 @@ pnpm test:e2e
 
 Os testes usam um banco SQLite temporário isolado e não alteram os dados locais da aplicação.
 
+## Restaurar dados demonstrativos
+
+Com o servidor parado, execute:
+
+```bash
+pnpm db:reset -- --confirm
+```
+
+O comando é bloqueado em produção e atua somente sobre o arquivo SQLite configurado em `DATABASE_PATH`.
+
 ## Estrutura
 
 ```text
