@@ -47,6 +47,10 @@ const mapAdoption = row => row && ({
   reason: row.reason, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at
 });
 
+const mapAdoptionHistory = row => ({
+  id: row.id, previousStatus: row.previous_status, newStatus: row.new_status, changedAt: row.changed_at
+});
+
 const mapDonation = row => row && ({
   id: row.id, donorName: row.donor_name, email: row.email, type: row.type,
   amount: row.amount, itemDescription: row.item_description, status: row.status,
@@ -173,9 +177,26 @@ export function createApp(overrides = {}) {
       error.status = 409;
       throw error;
     }
-    const result = db.prepare(`INSERT INTO adoption_applications
-      (animal_id,applicant_name,email,phone,housing_type,has_other_pets,reason) VALUES (?,?,?,?,?,?,?)`)
-      .run(a.animalId, a.applicantName, a.email, a.phone, a.housingType, a.hasOtherPets, a.reason);
+    const duplicate = db.prepare(`SELECT 1 FROM adoption_applications
+      WHERE animal_id=? AND email=? COLLATE NOCASE AND status IN ('recebida','em_analise') LIMIT 1`).get(a.animalId, a.email);
+    if (duplicate) {
+      const error = new Error('Já existe uma solicitação ativa deste e-mail para o animal.');
+      error.status = 409;
+      throw error;
+    }
+    db.exec('BEGIN');
+    let result;
+    try {
+      result = db.prepare(`INSERT INTO adoption_applications
+        (animal_id,applicant_name,email,phone,housing_type,has_other_pets,reason) VALUES (?,?,?,?,?,?,?)`)
+        .run(a.animalId, a.applicantName, a.email, a.phone, a.housingType, a.hasOtherPets, a.reason);
+      db.prepare('INSERT INTO adoption_status_history (adoption_id,previous_status,new_status) VALUES (?,NULL,?)')
+        .run(result.lastInsertRowid, 'recebida');
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
     res.status(201).json({ id: Number(result.lastInsertRowid), status: 'recebida', message: 'Solicitação recebida. Entraremos em contato após a análise.' });
   });
 
@@ -184,7 +205,8 @@ export function createApp(overrides = {}) {
     const sql = `SELECT a.*, animals.name animal_name FROM adoption_applications a
       JOIN animals ON animals.id = a.animal_id ${status ? 'WHERE a.status = ?' : ''} ORDER BY a.id DESC`;
     const rows = status ? db.prepare(sql).all(status) : db.prepare(sql).all();
-    res.json(rows.map(mapAdoption));
+    const history = db.prepare('SELECT * FROM adoption_status_history WHERE adoption_id=? ORDER BY id');
+    res.json(rows.map(row => ({ ...mapAdoption(row), history: history.all(row.id).map(mapAdoptionHistory) })));
   });
 
   app.patch('/api/adoptions/:id/status', requireAdmin, (req, res) => {
@@ -192,9 +214,20 @@ export function createApp(overrides = {}) {
     const status = enumeration(req.body.status, 'Status', adoptionStatuses);
     const adoption = db.prepare('SELECT * FROM adoption_applications WHERE id = ?').get(id);
     if (!adoption) throw notFound('Solicitação');
+    if (adoption.status === status) {
+      const row = db.prepare(`SELECT a.*, animals.name animal_name FROM adoption_applications a JOIN animals ON animals.id=a.animal_id WHERE a.id=?`).get(id);
+      return res.json({ ...mapAdoption(row), history: db.prepare('SELECT * FROM adoption_status_history WHERE adoption_id=? ORDER BY id').all(id).map(mapAdoptionHistory) });
+    }
+    const transitions = { recebida: ['em_analise', 'recusada'], em_analise: ['aprovada', 'recusada'], aprovada: [], recusada: [] };
+    if (!transitions[adoption.status].includes(status)) {
+      const error = new Error(`Não é possível alterar uma solicitação ${adoption.status} para ${status}.`);
+      error.status = 409;
+      throw error;
+    }
     db.exec('BEGIN');
     try {
       db.prepare('UPDATE adoption_applications SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(status, id);
+      db.prepare('INSERT INTO adoption_status_history (adoption_id,previous_status,new_status) VALUES (?,?,?)').run(id, adoption.status, status);
       if (status === 'aprovada') {
         db.prepare("UPDATE animals SET status='adotado',updated_at=CURRENT_TIMESTAMP WHERE id=?").run(adoption.animal_id);
         db.prepare("UPDATE adoption_applications SET status='recusada',updated_at=CURRENT_TIMESTAMP WHERE animal_id=? AND id<>? AND status IN ('recebida','em_analise')")
@@ -211,7 +244,7 @@ export function createApp(overrides = {}) {
       throw error;
     }
     const row = db.prepare(`SELECT a.*, animals.name animal_name FROM adoption_applications a JOIN animals ON animals.id=a.animal_id WHERE a.id=?`).get(id);
-    res.json(mapAdoption(row));
+    res.json({ ...mapAdoption(row), history: db.prepare('SELECT * FROM adoption_status_history WHERE adoption_id=? ORDER BY id').all(id).map(mapAdoptionHistory) });
   });
 
   app.get('/api/needs', (req, res) => {

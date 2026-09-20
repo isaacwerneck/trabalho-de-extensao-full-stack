@@ -56,6 +56,13 @@ const schema = `
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   ) STRICT;
+  CREATE TABLE IF NOT EXISTS adoption_status_history (
+    id INTEGER PRIMARY KEY,
+    adoption_id INTEGER NOT NULL REFERENCES adoption_applications(id) ON DELETE CASCADE,
+    previous_status TEXT,
+    new_status TEXT NOT NULL CHECK(new_status IN ('recebida','em_analise','aprovada','recusada')),
+    changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ) STRICT;
   CREATE TABLE IF NOT EXISTS needs (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
@@ -82,6 +89,7 @@ const schema = `
   ) STRICT;
   CREATE INDEX IF NOT EXISTS idx_animals_status ON animals(status);
   CREATE INDEX IF NOT EXISTS idx_adoptions_status ON adoption_applications(status);
+  CREATE INDEX IF NOT EXISTS idx_adoption_history ON adoption_status_history(adoption_id, id);
   CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
 `;
 

@@ -127,6 +127,12 @@ test('recebe uma adoção e aplica suas regras de status', async () => {
   } });
   assert.equal(created.response.status, 201);
   adoptionId = created.payload.id;
+  const duplicate = await request('/api/adoptions', { method: 'POST', body: {
+    animalId, applicantName: 'Maria da Silva', email: 'MARIA@example.com', phone: '21999998888',
+    housingType: 'casa', hasOtherPets: true,
+    reason: 'Quero reforçar a mesma solicitação, mas o sistema deve identificar a duplicidade.'
+  } });
+  assert.equal(duplicate.response.status, 409);
   const protectedDelete = await request(`/api/animals/${animalId}`, { method: 'DELETE', auth: true });
   assert.equal(protectedDelete.response.status, 409);
   await request(`/api/adoptions/${adoptionId}/status`, { method: 'PATCH', auth: true, body: { status: 'em_analise' } });
@@ -134,6 +140,9 @@ test('recebe uma adoção e aplica suas regras de status', async () => {
   assert.equal(animal.payload.status, 'em_processo');
   const approved = await request(`/api/adoptions/${adoptionId}/status`, { method: 'PATCH', auth: true, body: { status: 'aprovada' } });
   assert.equal(approved.payload.status, 'aprovada');
+  assert.deepEqual(approved.payload.history.map(item => item.newStatus), ['recebida', 'em_analise', 'aprovada']);
+  const invalidTransition = await request(`/api/adoptions/${adoptionId}/status`, { method: 'PATCH', auth: true, body: { status: 'recusada' } });
+  assert.equal(invalidTransition.response.status, 409);
   animal = await request(`/api/animals/${animalId}`);
   assert.equal(animal.payload.status, 'adotado');
   const unavailable = await request('/api/adoptions', { method: 'POST', body: {
