@@ -4,7 +4,6 @@ import { DatabaseSync } from 'node:sqlite';
 import { hashPassword } from './auth.js';
 
 const schema = `
-  PRAGMA foreign_keys = ON;
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
@@ -100,18 +99,42 @@ const schema = `
   ) STRICT;
   CREATE INDEX IF NOT EXISTS idx_animals_status ON animals(status);
   CREATE INDEX IF NOT EXISTS idx_adoptions_status ON adoption_applications(status);
+  CREATE INDEX IF NOT EXISTS idx_adoptions_animal ON adoption_applications(animal_id);
   CREATE INDEX IF NOT EXISTS idx_adoption_history ON adoption_status_history(adoption_id, id);
-  CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash);
-  CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(id DESC);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+  CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
 `;
+
+// Executa `fn` dentro de uma transação: ou tudo é gravado, ou nada é.
+function withTransaction(db, fn) {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    fn();
+    db.exec('COMMIT');
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
+}
 
 export function createDatabase(config) {
   fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
   const db = new DatabaseSync(config.databasePath);
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  // PRAGMAs são por conexão e precisam ser definidos antes de qualquer uso.
+  db.exec(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+    PRAGMA foreign_keys = ON;
+    PRAGMA busy_timeout = 5000;
+  `);
   db.exec(schema);
-  migrate(db);
-  seed(db, config);
+  withTransaction(db, () => {
+    migrate(db);
+    seed(db, config);
+  });
+  // Atualiza as estatísticas do planejador de consultas (operação leve).
+  db.exec('PRAGMA optimize');
   return db;
 }
 
@@ -122,14 +145,19 @@ function migrate(db) {
     ['neutered', 'INTEGER NOT NULL DEFAULT 0 CHECK(neutered IN (0,1))'],
     ['dewormed', 'INTEGER NOT NULL DEFAULT 0 CHECK(dewormed IN (0,1))'],
     ['special_needs', 'TEXT'],
-    ['health_notes', 'TEXT']
-    , ['archived_at', 'TEXT']
+    ['health_notes', 'TEXT'],
+    ['archived_at', 'TEXT']
   ];
   for (const [name, definition] of migrations) {
     if (!columns.has(name)) db.exec(`ALTER TABLE animals ADD COLUMN ${name} ${definition}`);
   }
   const needColumns = new Set(db.prepare('PRAGMA table_info(needs)').all().map(column => column.name));
   if (!needColumns.has('archived_at')) db.exec('ALTER TABLE needs ADD COLUMN archived_at TEXT');
+
+  // Remove índices redundantes que bancos criados com a versão anterior ainda possuem:
+  // - token_hash já tem índice automático por ser UNIQUE;
+  // - audit_logs.id já é a chave primária (rowid), que pode ser percorrida em ordem decrescente.
+  db.exec('DROP INDEX IF EXISTS idx_sessions_token; DROP INDEX IF EXISTS idx_audit_logs_created;');
 }
 
 function seed(db, config) {
@@ -150,11 +178,15 @@ function seed(db, config) {
 
 function seedAnimalCatalog(db) {
   const currentVersion = db.prepare("SELECT value FROM app_metadata WHERE key='demo_catalog_version'").get()?.value;
-  const applications = db.prepare('SELECT COUNT(*) total FROM adoption_applications').get().total;
-  const customAnimals = db.prepare("SELECT COUNT(*) total FROM animals WHERE name NOT IN ('Luna','Bento','Sol')").get().total;
+  const needsVersionUpdate = currentVersion !== '2';
 
-  if (currentVersion !== '2' && applications === 0 && customAnimals === 0) {
-    db.prepare('DELETE FROM animals').run();
+  // As verificações abaixo só importam quando o catálogo ainda não está na versão 2.
+  if (needsVersionUpdate) {
+    const hasApplications = db.prepare('SELECT EXISTS(SELECT 1 FROM adoption_applications) AS found').get().found === 1;
+    const hasCustomAnimals = db.prepare("SELECT EXISTS(SELECT 1 FROM animals WHERE name NOT IN ('Luna','Bento','Sol')) AS found").get().found === 1;
+    if (!hasApplications && !hasCustomAnimals) {
+      db.prepare('DELETE FROM animals').run();
+    }
   }
 
   if (!db.prepare('SELECT 1 FROM animals LIMIT 1').get()) {
@@ -169,6 +201,8 @@ function seedAnimalCatalog(db) {
     insert.run('Amora', 'gato', 'femea', 3, 'pequeno', 'Gentil e independente, gosta de ambientes silenciosos e já está em adaptação com uma possível família.', '/assets/animals/amora.jpg', 'em_dia', 1, 1, null, null, 'em_processo');
   }
 
-  db.prepare(`INSERT INTO app_metadata (key,value) VALUES ('demo_catalog_version','2')
-    ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+  if (needsVersionUpdate) {
+    db.prepare(`INSERT INTO app_metadata (key,value) VALUES ('demo_catalog_version','2')
+      ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+  }
 }
